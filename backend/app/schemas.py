@@ -71,3 +71,30 @@ class SuspensaoResponse(SuspensaoCreate):
 
     class Config:
         from_attributes = True
+
+class UsuarioCreate(BaseModel):
+    nome: str
+    email: str
+    senha: str
+    perfil: str = "admin"
+
+
+class UsuarioResponse(BaseModel):
+    id: int
+    nome: str
+    email: str
+    perfil: str
+    ativo: bool
+
+    class Config:
+        from_attributes = True
+
+
+class LoginRequest(BaseModel):
+    email: str
+    senha: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
