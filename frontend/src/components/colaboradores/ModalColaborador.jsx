@@ -37,9 +37,12 @@ export default function ModalColaborador({
         border
         border-zinc-800
         rounded-2xl
-        p-8
+        p-4
+        md:p-8
         w-full
         max-w-3xl
+        max-h-[90vh]
+        overflow-y-auto
       ">
 
         <div className="
@@ -115,6 +118,16 @@ export default function ModalColaborador({
               type="date"
               name="data_admissao"
               value={form.data_admissao}
+              onChange={atualizarCampo}
+            />
+          </Campo>
+
+          <Campo label="Data do ASO">
+            <input
+              className="input w-full"
+              type="date"
+              name="data_aso"
+              value={form.data_aso}
               onChange={atualizarCampo}
             />
           </Campo>

@@ -5,17 +5,17 @@ export default function FiltrosColaboradores({
   setFiltroStatus,
 }) {
   return (
-    <div className="mt-8 flex gap-4">
+    <div className="mt-8 flex flex-col md:flex-row gap-4">
 
       <input
-        className="input w-96"
+        className="input w-full md:w-96"
         placeholder="Buscar por nome, CPF ou telefone..."
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
       />
 
       <select
-        className="input w-48"
+        className="input w-full md:w-48"
         value={filtroStatus}
         onChange={(e) => setFiltroStatus(e.target.value)}
       >

@@ -24,7 +24,17 @@ export default function Suspensoes() {
   }
 
   useEffect(() => {
-    carregarDados();
+    async function carregarDadosIniciais() {
+      const [resSuspensoes, resColaboradores] = await Promise.all([
+        api.get("/suspensoes/"),
+        api.get("/colaboradores/"),
+      ]);
+
+      setSuspensoes(resSuspensoes.data);
+      setColaboradores(resColaboradores.data);
+    }
+
+    carregarDadosIniciais();
   }, []);
 
   function atualizarCampo(e) {
@@ -194,7 +204,7 @@ export default function Suspensoes() {
         rounded-2xl
         border
         border-zinc-800
-        overflow-hidden
+        overflow-x-auto
       ">
 
         <table className="w-full">

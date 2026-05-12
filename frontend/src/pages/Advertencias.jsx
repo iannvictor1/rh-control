@@ -24,7 +24,17 @@ export default function Advertencias() {
   }
 
   useEffect(() => {
-    carregarDados();
+    async function carregarDadosIniciais() {
+      const [resAdvertencias, resColaboradores] = await Promise.all([
+        api.get("/advertencias/"),
+        api.get("/colaboradores/"),
+      ]);
+
+      setAdvertencias(resAdvertencias.data);
+      setColaboradores(resColaboradores.data);
+    }
+
+    carregarDadosIniciais();
   }, []);
 
   function atualizarCampo(e) {
@@ -196,7 +206,7 @@ export default function Advertencias() {
         rounded-2xl
         border
         border-zinc-800
-        overflow-hidden
+        overflow-x-auto
       ">
 
         <table className="w-full">

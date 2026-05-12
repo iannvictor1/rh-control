@@ -5,7 +5,7 @@ export default function TabelaColaboradores({
   inativarColaborador,
 }) {
   return (
-    <div className="mt-10 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden">
+    <div className="mt-10 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-x-auto">
       <table className="w-full">
         <thead className="bg-zinc-800">
           <tr>

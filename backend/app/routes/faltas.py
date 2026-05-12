@@ -1,24 +1,16 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from app.auth import obter_usuario_atual
 
-from app.database import SessionLocal
+from app.dependencies import get_db
 from app.models import Falta
 from app.schemas import FaltaCreate, FaltaResponse
 
 router = APIRouter(
     prefix="/faltas",
-    tags=["Faltas"]
+    tags=["Faltas"],
+    dependencies=[Depends(obter_usuario_atual)]
 )
-
-
-def get_db():
-    db = SessionLocal()
-
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 @router.post("/", response_model=FaltaResponse)
 def criar_falta(

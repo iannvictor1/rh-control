@@ -8,6 +8,7 @@ class ColaboradorCreate(BaseModel):
     rg: str | None = None
     cpf: str | None = None
     data_admissao: date | None = None
+    data_aso: date | None = None
     endereco: str | None = None
     email: str | None = None
     telefone: str | None = None
@@ -19,6 +20,7 @@ class ColaboradorUpdate(BaseModel):
     rg: str | None = None
     cpf: str | None = None
     data_admissao: date | None = None
+    data_aso: date | None = None
     endereco: str | None = None
     email: str | None = None
     telefone: str | None = None
@@ -68,6 +70,21 @@ class SuspensaoCreate(BaseModel):
 class SuspensaoResponse(SuspensaoCreate):
     id: int
     status: str
+
+    class Config:
+        from_attributes = True
+
+
+class AtestadoMedicoCreate(BaseModel):
+    colaborador_id: int
+    data_atestado: date
+    cid: str | None = None
+    dias: int
+    observacao: str | None = None
+
+
+class AtestadoMedicoResponse(AtestadoMedicoCreate):
+    id: int
 
     class Config:
         from_attributes = True

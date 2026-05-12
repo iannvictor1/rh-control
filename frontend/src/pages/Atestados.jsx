@@ -2,34 +2,36 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 
-export default function Faltas() {
-  const [faltas, setFaltas] = useState([]);
+export default function Atestados() {
+  const [atestados, setAtestados] = useState([]);
   const [colaboradores, setColaboradores] = useState([]);
 
   const [form, setForm] = useState({
     colaborador_id: "",
-    data_falta: "",
-    motivo: "",
+    data_atestado: "",
+    cid: "",
+    dias: "",
+    observacao: "",
   });
 
   async function carregarDados() {
-    const [resFaltas, resColaboradores] = await Promise.all([
-      api.get("/faltas/"),
+    const [resAtestados, resColaboradores] = await Promise.all([
+      api.get("/atestados/"),
       api.get("/colaboradores/"),
     ]);
 
-    setFaltas(resFaltas.data);
+    setAtestados(resAtestados.data);
     setColaboradores(resColaboradores.data);
   }
 
   useEffect(() => {
     async function carregarDadosIniciais() {
-      const [resFaltas, resColaboradores] = await Promise.all([
-        api.get("/faltas/"),
+      const [resAtestados, resColaboradores] = await Promise.all([
+        api.get("/atestados/"),
         api.get("/colaboradores/"),
       ]);
 
-      setFaltas(resFaltas.data);
+      setAtestados(resAtestados.data);
       setColaboradores(resColaboradores.data);
     }
 
@@ -48,38 +50,42 @@ export default function Faltas() {
     return colaborador ? colaborador.nome : "Colaborador não encontrado";
   }
 
-  async function cadastrarFalta(e) {
+  async function cadastrarAtestado(e) {
     e.preventDefault();
 
     try {
-      await api.post("/faltas/", {
+      await api.post("/atestados/", {
         colaborador_id: Number(form.colaborador_id),
-        data_falta: form.data_falta,
-        motivo: form.motivo || null,
+        data_atestado: form.data_atestado,
+        cid: form.cid || null,
+        dias: Number(form.dias),
+        observacao: form.observacao || null,
       });
 
-      toast.success("Falta registrada com sucesso!");
+      toast.success("Atestado médico registrado!");
 
       setForm({
         colaborador_id: "",
-        data_falta: "",
-        motivo: "",
+        data_atestado: "",
+        cid: "",
+        dias: "",
+        observacao: "",
       });
 
       carregarDados();
     } catch (error) {
-      toast.error("Erro ao registrar falta.");
+      toast.error("Erro ao registrar atestado médico.");
       console.error(error);
     }
   }
 
   return (
     <>
-      <h2 className="text-4xl font-bold">Faltas</h2>
+      <h2 className="text-4xl font-bold">Atestados médicos</h2>
 
       <form
-        onSubmit={cadastrarFalta}
-        className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 grid grid-cols-4 gap-4"
+        onSubmit={cadastrarAtestado}
+        className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 grid grid-cols-5 gap-4"
       >
         <div>
           <label className="text-sm text-zinc-400 mb-1 block">
@@ -107,14 +113,14 @@ export default function Faltas() {
 
         <div>
           <label className="text-sm text-zinc-400 mb-1 block">
-            Data da falta
+            Data
           </label>
 
           <input
             className="input w-full"
             type="date"
-            name="data_falta"
-            value={form.data_falta}
+            name="data_atestado"
+            value={form.data_atestado}
             onChange={atualizarCampo}
             required
           />
@@ -122,15 +128,31 @@ export default function Faltas() {
 
         <div>
           <label className="text-sm text-zinc-400 mb-1 block">
-            Motivo
+            CID
           </label>
 
           <input
             className="input w-full"
-            name="motivo"
+            name="cid"
             placeholder="Opcional"
-            value={form.motivo}
+            value={form.cid}
             onChange={atualizarCampo}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm text-zinc-400 mb-1 block">
+            Dias
+          </label>
+
+          <input
+            className="input w-full"
+            type="number"
+            min="1"
+            name="dias"
+            value={form.dias}
+            onChange={atualizarCampo}
+            required
           />
         </div>
 
@@ -139,8 +161,22 @@ export default function Faltas() {
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl font-semibold transition"
           >
-            Registrar Falta
+            Registrar
           </button>
+        </div>
+
+        <div className="col-span-5">
+          <label className="text-sm text-zinc-400 mb-1 block">
+            Observação
+          </label>
+
+          <input
+            className="input w-full"
+            name="observacao"
+            placeholder="Opcional"
+            value={form.observacao}
+            onChange={atualizarCampo}
+          />
         </div>
       </form>
 
@@ -150,23 +186,27 @@ export default function Faltas() {
             <tr>
               <th className="text-left p-4">Colaborador</th>
               <th className="text-left p-4">Data</th>
-              <th className="text-left p-4">Motivo</th>
+              <th className="text-left p-4">CID</th>
+              <th className="text-left p-4">Dias</th>
+              <th className="text-left p-4">Observação</th>
             </tr>
           </thead>
 
           <tbody>
-            {faltas.map((falta) => (
-              <tr key={falta.id} className="border-t border-zinc-800">
+            {atestados.map((atestado) => (
+              <tr key={atestado.id} className="border-t border-zinc-800">
                 <td className="p-4">
-                  {buscarNomeColaborador(falta.colaborador_id)}
+                  {buscarNomeColaborador(atestado.colaborador_id)}
                 </td>
 
-                <td className="p-4">
-                  {falta.data_falta}
-                </td>
+                <td className="p-4">{atestado.data_atestado}</td>
+
+                <td className="p-4">{atestado.cid || "-"}</td>
+
+                <td className="p-4">{atestado.dias} dia(s)</td>
 
                 <td className="p-4">
-                  {falta.motivo || "Sem motivo informado"}
+                  {atestado.observacao || "Sem observação"}
                 </td>
               </tr>
             ))}

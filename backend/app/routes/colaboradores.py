@@ -2,31 +2,24 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.schemas import ColaboradorCreate, ColaboradorResponse, ColaboradorUpdate
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.dependencies import get_db
+from app.auth import obter_usuario_atual
+
 from app.models import Colaborador
 from app.schemas import ColaboradorCreate, ColaboradorResponse
 from app.models import (
     Colaborador,
     Falta,
     Advertencia,
-    Suspensao
+    Suspensao,
+    AtestadoMedico,
 )
 
 router = APIRouter(
     prefix="/colaboradores",
-    tags=["Colaboradores"]
+    tags=["Colaboradores"],
+    dependencies=[Depends(obter_usuario_atual)]
 )
-
-
-def get_db():
-    db = SessionLocal()
-
-    try:
-        yield db
-
-    finally:
-        db.close()
-
 
 @router.post("/", response_model=ColaboradorResponse)
 def criar_colaborador(
@@ -116,9 +109,14 @@ def detalhar_colaborador(
         Suspensao.colaborador_id == colaborador_id
     ).all()
 
+    atestados = db.query(AtestadoMedico).filter(
+        AtestadoMedico.colaborador_id == colaborador_id
+    ).all()
+
     return {
         "colaborador": colaborador,
         "faltas": faltas,
         "advertencias": advertencias,
-        "suspensoes": suspensoes
+        "suspensoes": suspensoes,
+        "atestados": atestados
     }

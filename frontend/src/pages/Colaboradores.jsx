@@ -12,6 +12,7 @@ const formInicial = {
   rg: "",
   cpf: "",
   data_admissao: "",
+  data_aso: "",
   endereco: "",
   email: "",
   telefone: "",
@@ -52,7 +53,12 @@ export default function Colaboradores() {
   }
 
   useEffect(() => {
-    carregarColaboradores();
+    async function carregarDadosIniciais() {
+      const response = await api.get("/colaboradores/");
+      setColaboradores(response.data);
+    }
+
+    carregarDadosIniciais();
   }, []);
 
   function atualizarCampo(e) {
@@ -91,6 +97,7 @@ export default function Colaboradores() {
       rg: colaborador.rg || "",
       cpf: colaborador.cpf || "",
       data_admissao: colaborador.data_admissao || "",
+      data_aso: colaborador.data_aso || "",
       endereco: colaborador.endereco || "",
       email: colaborador.email || "",
       telefone: colaborador.telefone || "",
@@ -108,6 +115,7 @@ export default function Colaboradores() {
         ...form,
         data_nascimento: form.data_nascimento || null,
         data_admissao: form.data_admissao || null,
+        data_aso: form.data_aso || null,
       };
 
       if (modoEdicao) {
@@ -163,8 +171,8 @@ export default function Colaboradores() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <h2 className="text-4xl font-bold">Colaboradores</h2>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h2 className="text-3xl md:text-4xl font-bold">Colaboradores</h2>
 
         <button
           onClick={abrirCadastro}

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from app.auth import obter_usuario_atual
+from app.dependencies import get_db
 
-from app.database import SessionLocal
 from app.models import Advertencia
 from app.schemas import (
     AdvertenciaCreate,
@@ -10,18 +11,9 @@ from app.schemas import (
 
 router = APIRouter(
     prefix="/advertencias",
-    tags=["Advertências"]
+    tags=["Advertências"],
+    dependencies=[Depends(obter_usuario_atual)]
 )
-
-
-def get_db():
-    db = SessionLocal()
-
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 @router.post("/", response_model=AdvertenciaResponse)
 def criar_advertencia(

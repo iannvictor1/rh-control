@@ -6,12 +6,14 @@
 
 .page-container {
   width: 100%;
+  min-width: 0;
 }
 
 .page-header {
-  display: felx;
+  display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
 }
 
 .page-title {
@@ -32,6 +34,7 @@
   border: 1px solid #27272a;
   border-radius: 1rem;
   padding: 1.5rem;
+  min-width: 0;
 }
 
 .dashboard-card-title {
@@ -51,7 +54,7 @@
   background: #18181b;
   border: 1px solid #27272a;
   border-radius: 1rem;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .ranking-header {
@@ -67,6 +70,7 @@
 
 .ranking-table {
   width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
 }
 
@@ -101,12 +105,60 @@
   color: #60a5fa;
 }
 
-.nivel-badge.atenção {
+.nivel-badge.atencao {
   background: rgba(234, 179, 8, 0.18);
   color: #facc15;
 }
 
-.nivel-badge.crítico {
+.nivel-badge.critico {
   background: rgba(239, 68, 68, 0.18);
   color: #f87171;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .page-title {
+    font-size: 2rem;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .dashboard-card {
+    padding: 1.25rem;
+  }
+
+  .dashboard-card-value {
+    font-size: 2rem;
+  }
+
+  .ranking-header {
+    padding: 1rem;
+  }
+
+  .ranking-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .grid.grid-cols-2,
+  .grid.grid-cols-3,
+  .grid.grid-cols-4,
+  .grid.grid-cols-5 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .col-span-2,
+  .col-span-5 {
+    grid-column: auto !important;
+  }
+
+  table {
+    min-width: 640px;
+  }
 }

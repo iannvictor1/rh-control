@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from app.dependencies import get_db
 
-from app.database import SessionLocal
 from app.models import Usuario
 from app.schemas import LoginRequest, TokenResponse, UsuarioCreate, UsuarioResponse
 from app.auth import gerar_hash_senha, verificar_senha, criar_token_acesso
@@ -10,16 +10,6 @@ router = APIRouter(
     prefix="/auth",
     tags=["Autenticação"]
 )
-
-
-def get_db():
-    db = SessionLocal()
-
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 @router.post("/registrar", response_model=UsuarioResponse)
 def registrar_usuario(

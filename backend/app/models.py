@@ -16,6 +16,7 @@ class Colaborador(Base):
     cpf = Column(String, nullable=True)
 
     data_admissao = Column(Date, nullable=True)
+    data_aso = Column(Date, nullable=True)
 
     endereco = Column(String, nullable=True)
 
@@ -79,6 +80,24 @@ class Suspensao(Base):
         String,
         default="Ativa"
     )
+
+    colaborador = relationship("Colaborador")
+
+
+class AtestadoMedico(Base):
+    __tablename__ = "atestados_medicos"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    colaborador_id = Column(
+        Integer,
+        ForeignKey("colaboradores.id")
+    )
+
+    data_atestado = Column(Date, nullable=False)
+    cid = Column(String, nullable=True)
+    dias = Column(Integer, nullable=False)
+    observacao = Column(String, nullable=True)
 
     colaborador = relationship("Colaborador")
     
