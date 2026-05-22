@@ -1,8 +1,59 @@
 import { Link } from "react-router-dom";
+
+function formatarData(data) {
+  if (!data) return "Não informado";
+
+  return new Date(`${data}T00:00:00`).toLocaleDateString("pt-BR");
+}
+
+function statusAso(colaborador) {
+  if (!colaborador.data_aso) {
+    return {
+      texto: "ASO não informado",
+      classe: "bg-zinc-700/60 text-zinc-300",
+    };
+  }
+
+  const vencimento = colaborador.vencimento_aso || (() => {
+    const data = new Date(`${colaborador.data_aso}T00:00:00`);
+    data.setFullYear(data.getFullYear() + 1);
+    return data.toISOString().slice(0, 10);
+  })();
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const dataVencimento = new Date(`${vencimento}T00:00:00`);
+  const diasRestantes = Math.ceil(
+    (dataVencimento - hoje) / (1000 * 60 * 60 * 24)
+  );
+
+  if (diasRestantes < 0) {
+    return {
+      texto: `Vencido em ${formatarData(vencimento)}`,
+      classe: "bg-red-500/20 text-red-400",
+    };
+  }
+
+  if (diasRestantes <= 30) {
+    return {
+      texto: `Vence em ${diasRestantes} dia(s)`,
+      classe: "bg-yellow-500/20 text-yellow-300",
+    };
+  }
+
+  return {
+    texto: `Válido até ${formatarData(vencimento)}`,
+    classe: "bg-cyan-500/20 text-cyan-300",
+  };
+}
+
 export default function TabelaColaboradores({
   colaboradores,
   abrirEdicao,
   inativarColaborador,
+  ativarColaborador,
+  podeGerenciar = true,
 }) {
   return (
     <div className="mt-10 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-x-auto">
@@ -10,59 +61,89 @@ export default function TabelaColaboradores({
         <thead className="bg-zinc-800">
           <tr>
             <th className="text-left p-4">Nome</th>
+            <th className="text-left p-4">Matricula</th>
+            <th className="text-left p-4">Cargo/Setor</th>
             <th className="text-left p-4">CPF</th>
             <th className="text-left p-4">Telefone</th>
+            <th className="text-left p-4">ASO</th>
             <th className="text-left p-4">Status</th>
             <th className="text-left p-4">Ações</th>
           </tr>
         </thead>
 
         <tbody>
-          {colaboradores.map((colaborador) => (
-            <tr key={colaborador.id} className="border-t border-zinc-800">
-              <td className="p-4">{colaborador.nome}</td>
-              <td className="p-4">{colaborador.cpf}</td>
-              <td className="p-4">{colaborador.telefone}</td>
+          {colaboradores.map((colaborador) => {
+            const aso = statusAso(colaborador);
 
-              <td className="p-4">
-                {colaborador.ativo ? (
-                  <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm">
-                    Ativo
+            return (
+              <tr key={colaborador.id} className="border-t border-zinc-800">
+                <td className="p-4">{colaborador.nome}</td>
+                <td className="p-4">{colaborador.matricula || "-"}</td>
+                <td className="p-4">
+                  <div>{colaborador.cargo || "-"}</div>
+                  <div className="text-sm text-zinc-500">
+                    {colaborador.setor || "-"}
+                  </div>
+                </td>
+                <td className="p-4">{colaborador.cpf || "-"}</td>
+                <td className="p-4">{colaborador.telefone || "-"}</td>
+
+                <td className="p-4">
+                  <span className={`${aso.classe} px-3 py-1 rounded-full text-sm whitespace-nowrap`}>
+                    {aso.texto}
                   </span>
-                ) : (
-                  <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-sm">
-                    Inativo
-                  </span>
-                )}
-              </td>
+                </td>
 
-              <td className="p-4 flex gap-2">
+                <td className="p-4">
+                  {colaborador.ativo ? (
+                    <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm">
+                      Ativo
+                    </span>
+                  ) : (
+                    <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-sm">
+                      Inativo
+                    </span>
+                  )}
+                </td>
 
-                <Link
-                  to={`/colaboradores/${colaborador.id}`}
-                  className="px-3 py-2 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
-                >
-                  Histórico
-                </Link>
-
-                <button
-                  onClick={() => abrirEdicao(colaborador)}
-                  className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700"
-                >
-                  Editar
-                </button>
-
-                {colaborador.ativo && (
-                  <button
-                    onClick={() => inativarColaborador(colaborador.id)}
-                    className="px-3 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30"
+                <td className="p-4 flex gap-2">
+                  <Link
+                    to={`/colaboradores/${colaborador.id}`}
+                    className="px-3 py-2 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
                   >
-                    Inativar
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+                    Histórico
+                  </Link>
+
+                  {podeGerenciar && (
+                    <button
+                      onClick={() => abrirEdicao(colaborador)}
+                      className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700"
+                    >
+                      Editar
+                    </button>
+                  )}
+
+                  {podeGerenciar && colaborador.ativo && (
+                    <button
+                      onClick={() => inativarColaborador(colaborador.id)}
+                      className="px-3 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30"
+                    >
+                      Inativar
+                    </button>
+                  )}
+
+                  {podeGerenciar && !colaborador.ativo && (
+                    <button
+                      onClick={() => ativarColaborador(colaborador.id)}
+                      className="px-3 py-2 rounded-lg bg-green-600/20 text-green-400 hover:bg-green-600/30"
+                    >
+                      Ativar
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

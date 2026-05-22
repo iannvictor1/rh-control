@@ -4,6 +4,123 @@
   @apply bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500;
 }
 
+.action-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.action-menu-button {
+  width: 2.6rem;
+  height: 2.6rem;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.22rem;
+  border-radius: 0.75rem;
+  background: #2563eb;
+  color: white;
+  transition: background 0.2s ease;
+}
+
+.action-menu-button:hover {
+  background: #1d4ed8;
+}
+
+.action-menu-button span {
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.action-menu-list {
+  position: fixed;
+  z-index: 100;
+  min-width: 8.5rem;
+  overflow: hidden;
+  border: 1px solid #d4d4d8;
+  border-radius: 0.75rem;
+  background: white;
+  color: #18181b;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+}
+
+.action-menu-list button {
+  width: 100%;
+  display: block;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.action-menu-list button:hover {
+  background: #f4f4f5;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.dialog-box {
+  width: 100%;
+  max-width: 26rem;
+  border: 1px solid #3f3f46;
+  border-radius: 1rem;
+  background: #18181b;
+  padding: 1.5rem;
+  color: white;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
+.dialog-box h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.dialog-box p {
+  margin-top: 0.65rem;
+  color: #a1a1aa;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.dialog-button-secondary,
+.dialog-button-danger {
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  transition: background 0.2s ease;
+}
+
+.dialog-button-secondary {
+  background: #27272a;
+}
+
+.dialog-button-secondary:hover {
+  background: #3f3f46;
+}
+
+.dialog-button-danger {
+  background: #dc2626;
+}
+
+.dialog-button-danger:hover {
+  background: #b91c1c;
+}
+
 .page-container {
   width: 100%;
   min-width: 0;

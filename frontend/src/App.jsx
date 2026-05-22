@@ -11,6 +11,8 @@ import Atestados from "./pages/Atestados";
 import Advertencias from "./pages/Advertencias";
 import Suspensoes from "./pages/Suspensoes";
 import DetalheColaborador from "./pages/DetalheColaborador";
+import Usuarios from "./pages/Usuarios";
+import Exportacoes from "./pages/Exportacoes";
 
 export default function App() {
   return (
@@ -32,6 +34,8 @@ export default function App() {
           <Route path="/atestados" element={<Atestados />} />
           <Route path="/advertencias" element={<Advertencias />} />
           <Route path="/suspensoes" element={<Suspensoes />} />
+          <Route path="/exportacoes" element={<Exportacoes />} />
+          <Route path="/usuarios" element={<Usuarios />} />
         </Route>
       </Routes>
     </BrowserRouter>

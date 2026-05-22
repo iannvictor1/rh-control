@@ -1,7 +1,9 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
+import { isAdmin } from "../services/utils/auth";
 
 export default function Layout() {
   const navigate = useNavigate();
+  const admin = isAdmin();
 
   function logout() {
     localStorage.removeItem("token");
@@ -59,6 +61,22 @@ export default function Layout() {
             >
               Suspensões
             </Link>
+
+            <Link
+              to="/exportacoes"
+              className="hover:text-blue-400 transition whitespace-nowrap"
+            >
+              Exportações
+            </Link>
+
+            {admin && (
+              <Link
+                to="/usuarios"
+                className="hover:text-blue-400 transition whitespace-nowrap"
+              >
+                Usuários
+              </Link>
+            )}
           </nav>
         </div>
 

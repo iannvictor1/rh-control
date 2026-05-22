@@ -1,11 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import os
-from jose import jwt
-from passlib.context import CryptContext
+
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from jose import JWTError
 
 from app.database import SessionLocal
 from app.models import Usuario
@@ -24,29 +24,32 @@ pwd_context = CryptContext(
     deprecated="auto"
 )
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl="/auth/token",
+    auto_error=False
+)
+
 
 def get_db_auth():
     db = SessionLocal()
-    
-    try: 
+
+    try:
         yield db
     finally:
         db.close()
 
-def obter_usuario_atual(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db_auth)
-):
+
+def obter_usuario_por_token(token: str, db: Session):
     try:
         payload = jwt.decode(
             token,
             SECRET_KEY,
             algorithms=[ALGORITHM]
         )
-        
+
         email = payload.get("sub")
-        
+
         if email is None:
             raise HTTPException(
                 status_code=401,
@@ -57,16 +60,34 @@ def obter_usuario_atual(
             status_code=401,
             detail="Token inválido"
         )
+
     usuario = db.query(Usuario).filter(
         Usuario.email == email
     ).first()
-    
+
     if not usuario or not usuario.ativo:
         raise HTTPException(
             status_code=401,
-            detail="Usuárui não autorizado"
+            detail="Usuário não autorizado"
         )
-    
+
+    return usuario
+
+
+def obter_usuario_atual(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db_auth)
+):
+    return obter_usuario_por_token(token, db)
+
+
+def obter_admin_atual(usuario: Usuario = Depends(obter_usuario_atual)):
+    if usuario.perfil != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso permitido apenas para administradores"
+        )
+
     return usuario
 
 
@@ -81,7 +102,7 @@ def verificar_senha(senha: str, senha_hash: str):
 def criar_token_acesso(data: dict):
     dados = data.copy()
 
-    expiracao = datetime.utcnow() + timedelta(
+    expiracao = datetime.now(UTC) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
@@ -92,3 +113,16 @@ def criar_token_acesso(data: dict):
         SECRET_KEY,
         algorithm=ALGORITHM
     )
+
+
+def exigir_perfis(*perfis_permitidos):
+    def dependencia(usuario: Usuario = Depends(obter_usuario_atual)):
+        if usuario.perfil not in perfis_permitidos:
+            raise HTTPException(
+                status_code=403,
+                detail="Permissão insuficiente"
+            )
+
+        return usuario
+
+    return dependencia

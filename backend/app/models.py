@@ -10,12 +10,17 @@ class Colaborador(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     nome = Column(String, nullable=False)
+    matricula = Column(String, nullable=True)
+    cargo = Column(String, nullable=True)
+    setor = Column(String, nullable=True)
+    tipo_contrato = Column(String, nullable=True)
     data_nascimento = Column(Date, nullable=True)
 
     rg = Column(String, nullable=True)
     cpf = Column(String, nullable=True)
 
     data_admissao = Column(Date, nullable=True)
+    data_desligamento = Column(Date, nullable=True)
     data_aso = Column(Date, nullable=True)
 
     endereco = Column(String, nullable=True)
@@ -23,6 +28,7 @@ class Colaborador(Base):
     email = Column(String, nullable=True)
     telefone = Column(String, nullable=True)
     telefone_emergencia = Column(String, nullable=True)
+    observacoes = Column(String, nullable=True)
 
     ativo = Column(Boolean, default=True)
     
@@ -33,7 +39,8 @@ class Falta(Base):
 
     colaborador_id = Column(
         Integer,
-        ForeignKey("colaboradores.id")
+        ForeignKey("colaboradores.id"),
+        nullable=False
     )
 
     data_falta = Column(Date, nullable=False)
@@ -49,7 +56,8 @@ class Advertencia(Base):
 
     colaborador_id = Column(
         Integer,
-        ForeignKey("colaboradores.id")
+        ForeignKey("colaboradores.id"),
+        nullable=False
     )
 
     data_advertencia = Column(Date, nullable=False)
@@ -67,7 +75,8 @@ class Suspensao(Base):
 
     colaborador_id = Column(
         Integer,
-        ForeignKey("colaboradores.id")
+        ForeignKey("colaboradores.id"),
+        nullable=False
     )
 
     data_inicio = Column(Date, nullable=False)
@@ -91,7 +100,8 @@ class AtestadoMedico(Base):
 
     colaborador_id = Column(
         Integer,
-        ForeignKey("colaboradores.id")
+        ForeignKey("colaboradores.id"),
+        nullable=False
     )
 
     data_atestado = Column(Date, nullable=False)
