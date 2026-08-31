@@ -28,29 +28,87 @@ function limitar(valor, minimo, maximo) {
   return Math.max(minimo, Math.min(valor, maximo));
 }
 
-function posicaoInicial(nota, indice) {
-  if (nota.posicao_x !== null && nota.posicao_y !== null) {
+const NOTA_LARGURA_MINIMA = 300;
+const NOTA_ALTURA_MINIMA = 360;
+const NOTA_TOPO_SEGURO = 136;
+const NOTA_ESQUERDA_DESKTOP = 300;
+
+function dimensoesTela() {
+  if (typeof window === "undefined") {
     return {
-      left: `${nota.posicao_x}px`,
-      top: `${nota.posicao_y}px`,
+      largura: 1200,
+      altura: 720,
     };
   }
 
   return {
-    left: `${260 + (indice % 3) * 330}px`,
-    top: `${80 + Math.floor(indice / 3) * 390}px`,
+    largura: window.innerWidth,
+    altura: window.innerHeight,
   };
+}
+
+function limitesNota() {
+  const { largura, altura } = dimensoesTela();
+
+  return {
+    esquerdaMinima: largura < 768 ? 8 : 16,
+    topoMinimo: altura < 620 ? 56 : NOTA_TOPO_SEGURO,
+    esquerdaMaxima: Math.max(8, largura - NOTA_LARGURA_MINIMA),
+    topoMaximo: Math.max(56, altura - NOTA_ALTURA_MINIMA),
+  };
+}
+
+function ajustarPosicaoNota(posicao) {
+  const limites = limitesNota();
+
+  return {
+    left: `${limitar(
+      posicao.posicao_x,
+      limites.esquerdaMinima,
+      limites.esquerdaMaxima
+    )}px`,
+    top: `${limitar(
+      posicao.posicao_y,
+      limites.topoMinimo,
+      limites.topoMaximo
+    )}px`,
+  };
+}
+
+function posicaoInicial(nota, indice) {
+  if (nota.posicao_x !== null && nota.posicao_y !== null) {
+    return ajustarPosicaoNota({
+      posicao_x: nota.posicao_x,
+      posicao_y: nota.posicao_y,
+    });
+  }
+
+  return ajustarPosicaoNota({
+    posicao_x: NOTA_ESQUERDA_DESKTOP + (indice % 3) * 330,
+    posicao_y: NOTA_TOPO_SEGURO + Math.floor(indice / 3) * 390,
+  });
 }
 
 function calcularProximaPosicao(notasAtuais) {
   const notasAbertas = notasAtuais.filter((nota) => nota.aberta);
   const deslocamento = notasAbertas.length % 8;
-  const larguraMaxima = typeof window === "undefined" ? 1200 : window.innerWidth - 300;
-  const alturaMaxima = typeof window === "undefined" ? 720 : window.innerHeight - 360;
+  const limites = limitesNota();
 
   return {
-    posicao_x: Math.round(limitar(260 + deslocamento * 36, 0, larguraMaxima)),
-    posicao_y: Math.round(limitar(80 + deslocamento * 36, 0, alturaMaxima)),
+    posicao_x: Math.round(
+      limitar(
+        NOTA_ESQUERDA_DESKTOP + deslocamento * 36,
+        limites.esquerdaMinima,
+        limites.esquerdaMaxima
+      )
+    ),
+    posicao_y: Math.round(
+      limitar(
+        NOTA_TOPO_SEGURO + deslocamento * 36,
+        limites.topoMinimo,
+        limites.topoMaximo
+      )
+    ),
   };
 }
 
@@ -172,8 +230,17 @@ export default function NotasFlutuantes() {
     if (!arrastando) return undefined;
 
     function moverNota(e) {
-      const novoX = limitar(e.clientX - arrastando.offsetX, 0, window.innerWidth - 300);
-      const novoY = limitar(e.clientY - arrastando.offsetY, 0, window.innerHeight - 360);
+      const limites = limitesNota();
+      const novoX = limitar(
+        e.clientX - arrastando.offsetX,
+        limites.esquerdaMinima,
+        limites.esquerdaMaxima
+      );
+      const novoY = limitar(
+        e.clientY - arrastando.offsetY,
+        limites.topoMinimo,
+        limites.topoMaximo
+      );
 
       setNotas((atuais) =>
         atuais.map((nota) =>
@@ -185,11 +252,20 @@ export default function NotasFlutuantes() {
     }
 
     async function soltarNota(e) {
+      const limites = limitesNota();
       const posicao_x = Math.round(
-        limitar(e.clientX - arrastando.offsetX, 0, window.innerWidth - 300)
+        limitar(
+          e.clientX - arrastando.offsetX,
+          limites.esquerdaMinima,
+          limites.esquerdaMaxima
+        )
       );
       const posicao_y = Math.round(
-        limitar(e.clientY - arrastando.offsetY, 0, window.innerHeight - 360)
+        limitar(
+          e.clientY - arrastando.offsetY,
+          limites.topoMinimo,
+          limites.topoMaximo
+        )
       );
 
       setArrastando(null);
