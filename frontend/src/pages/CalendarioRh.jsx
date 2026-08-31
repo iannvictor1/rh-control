@@ -57,6 +57,13 @@ function formatarMesAno(data) {
   }).format(data);
 }
 
+function valorMesInput(data) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+
+  return `${ano}-${mes}`;
+}
+
 function descricaoEvento(evento) {
   const partes = [evento.colaborador_nome];
 
@@ -117,6 +124,14 @@ export default function CalendarioRh() {
     setReferencia(inicioMes(new Date()));
   }
 
+  function escolherMes(e) {
+    const [ano, mes] = e.target.value.split("-").map(Number);
+
+    if (!ano || !mes) return;
+
+    setReferencia(new Date(ano, mes - 1, 1));
+  }
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -130,7 +145,7 @@ export default function CalendarioRh() {
 
       <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-4 items-center">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="px-4 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 font-semibold"
@@ -145,6 +160,14 @@ export default function CalendarioRh() {
             >
               Próximo
             </button>
+            <input
+              type="month"
+              className="input w-44"
+              value={valorMesInput(referencia)}
+              onChange={escolherMes}
+              title="Escolher mês"
+              aria-label="Escolher mês do calendário"
+            />
           </div>
 
           <h2 className="text-2xl font-bold capitalize text-center">
