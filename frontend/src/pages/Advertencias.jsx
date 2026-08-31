@@ -1,61 +1,81 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import ActionMenu from "../components/ActionMenu";
+import AuditInfo from "../components/AuditInfo";
 import ConfirmDialog from "../components/ConfirmDialog";
+import FiltrosOcorrencias from "../components/FiltrosOcorrencias";
+import FormOcorrencia from "../components/FormOcorrencia";
+import Paginacao from "../components/Paginacao";
+import useBuscaPaginada from "../hooks/useBuscaPaginada";
 import api from "../services/api";
 import { canManageRh } from "../services/utils/auth";
-import { dataDentroPeriodo, formatarData } from "../services/utils/formatters";
+import {
+  extrairPdfDisciplinar,
+  labelModeloRegistro,
+  modelosAdvertencia,
+} from "../services/utils/documentosDisciplinares";
+import { getApiErrorMessage } from "../services/utils/errors";
+import { formatarData } from "../services/utils/formatters";
 
 const formInicial = {
   colaborador_id: "",
   data_advertencia: "",
   tipo: "Verbal",
+  modelo: "falta_injustificada",
+  modelo_outro: "",
+  dias_ocorrencia: "",
+  funcao_ocorrencia: "",
   motivo: "",
+  observacoes: "",
 };
 
 export default function Advertencias() {
-  const [advertencias, setAdvertencias] = useState([]);
   const [colaboradores, setColaboradores] = useState([]);
   const [form, setForm] = useState(formInicial);
   const [editando, setEditando] = useState(null);
   const [menuAberto, setMenuAberto] = useState(null);
-  const [carregando, setCarregando] = useState(true);
   const [advertenciaParaExcluir, setAdvertenciaParaExcluir] = useState(null);
   const [busca, setBusca] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("todos");
   const podeGerenciar = canManageRh();
+  const hoje = new Date().toISOString().slice(0, 10);
 
-  async function carregarDados() {
-    const [resAdvertencias, resColaboradores] = await Promise.all([
-      api.get("/advertencias/"),
-      api.get("/colaboradores/"),
-    ]);
+  const filtros = useMemo(() => ({
+    q: busca,
+    tipo: filtroTipo,
+    data_inicio: dataInicio,
+    data_fim: dataFim,
+  }), [busca, dataInicio, dataFim, filtroTipo]);
 
-    setAdvertencias(resAdvertencias.data);
-    setColaboradores(resColaboradores.data);
-  }
+  const {
+    items: advertencias,
+    total,
+    pagina,
+    setPagina,
+    carregando,
+    limitePorPagina,
+    carregar: carregarAdvertencias,
+    atualizarFiltro,
+  } = useBuscaPaginada({
+    endpoint: "/advertencias/busca",
+    filtros,
+    mensagemErro: "Erro ao carregar advertências.",
+  });
 
   useEffect(() => {
-    async function carregarDadosIniciais() {
+    async function carregarColaboradores() {
       try {
-        const [resAdvertencias, resColaboradores] = await Promise.all([
-          api.get("/advertencias/"),
-          api.get("/colaboradores/"),
-        ]);
-
-        setAdvertencias(resAdvertencias.data);
-        setColaboradores(resColaboradores.data);
+        const response = await api.get("/colaboradores/");
+        setColaboradores(response.data);
       } catch (error) {
-        toast.error("Erro ao carregar advertencias.");
+        toast.error("Erro ao carregar colaboradores.");
         console.error(error);
-      } finally {
-        setCarregando(false);
       }
     }
 
-    carregarDadosIniciais();
+    carregarColaboradores();
   }, []);
 
   function atualizarCampo(e) {
@@ -65,9 +85,8 @@ export default function Advertencias() {
     });
   }
 
-  function buscarNomeColaborador(id) {
-    const colaborador = colaboradores.find((c) => c.id === id);
-    return colaborador ? colaborador.nome : "Colaborador nao encontrado";
+  function buscarNomeColaborador(registro) {
+    return registro.colaborador?.nome || "Colaborador não encontrado";
   }
 
   function editarAdvertencia(advertencia) {
@@ -77,7 +96,12 @@ export default function Advertencias() {
       colaborador_id: String(advertencia.colaborador_id),
       data_advertencia: advertencia.data_advertencia || "",
       tipo: advertencia.tipo || "Verbal",
+      modelo: advertencia.detalhes?.modelo || "falta_injustificada",
+      modelo_outro: advertencia.detalhes?.modelo_outro || "",
+      dias_ocorrencia: advertencia.detalhes?.dias_ocorrencia || "",
+      funcao_ocorrencia: advertencia.detalhes?.funcao_ocorrencia || "",
       motivo: advertencia.motivo || "",
+      observacoes: advertencia.detalhes?.observacoes || "",
     });
   }
 
@@ -94,26 +118,33 @@ export default function Advertencias() {
       data_advertencia: form.data_advertencia,
       tipo: form.tipo,
       motivo: form.motivo,
+      detalhes: {
+        modelo: form.modelo,
+        modelo_outro: form.modelo_outro,
+        dias_ocorrencia: form.dias_ocorrencia,
+        funcao_ocorrencia: form.funcao_ocorrencia,
+        observacoes: form.observacoes,
+      },
     };
 
     try {
       if (editando) {
         await api.put(`/advertencias/${editando.id}`, dados);
-        toast.success("Advertencia atualizada!");
+        toast.success("Advertência atualizada!");
       } else {
         await api.post("/advertencias/", dados);
-        toast.success("Advertencia registrada!");
+        toast.success("Advertência registrada!");
       }
 
       cancelarEdicao();
-      carregarDados();
+      carregarAdvertencias();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao salvar advertencia.");
+      toast.error(getApiErrorMessage(error, "Erro ao salvar advertência."));
       console.error(error);
     }
   }
 
-  async function excluirAdvertencia(advertencia) {
+  function excluirAdvertencia(advertencia) {
     setMenuAberto(null);
     setAdvertenciaParaExcluir(advertencia);
   }
@@ -123,159 +154,121 @@ export default function Advertencias() {
 
     try {
       await api.delete(`/advertencias/${advertenciaParaExcluir.id}`);
-      toast.success("Advertencia excluida!");
+      toast.success("Advertência excluída!");
 
       if (editando?.id === advertenciaParaExcluir.id) {
         cancelarEdicao();
       }
 
       setAdvertenciaParaExcluir(null);
-      carregarDados();
+      carregarAdvertencias();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao excluir advertencia.");
+      toast.error(getApiErrorMessage(error, "Erro ao excluir advertência."));
       console.error(error);
     }
   }
 
-  const advertenciasFiltradas = advertencias.filter((advertencia) => {
-    const textoBusca = busca.toLowerCase();
-    const nome = buscarNomeColaborador(advertencia.colaborador_id).toLowerCase();
-    const motivo = (advertencia.motivo || "").toLowerCase();
-    const tipoOk = filtroTipo === "todos" || advertencia.tipo === filtroTipo;
-
-    return (
-      tipoOk &&
-      (nome.includes(textoBusca) || motivo.includes(textoBusca)) &&
-      dataDentroPeriodo(advertencia.data_advertencia, dataInicio, dataFim)
-    );
-  });
-
   return (
     <>
-      <h2 className="text-4xl font-bold">Advertencias</h2>
+      <h2 className="text-4xl font-bold">Advertências</h2>
 
       {podeGerenciar && (
-        <form
+        <FormOcorrencia
+          form={form}
+          editando={editando}
+          colaboradores={colaboradores}
+          hoje={hoje}
+          onChange={atualizarCampo}
           onSubmit={salvarAdvertencia}
-          className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 grid grid-cols-5 gap-4"
-        >
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">
-            Colaborador
-          </label>
-
-          <select
-            className="input w-full"
-            name="colaborador_id"
-            value={form.colaborador_id}
-            onChange={atualizarCampo}
-            required
-          >
-            <option value="">Selecione</option>
-
-            {colaboradores
-              .filter((colaborador) => colaborador.ativo)
-              .map((colaborador) => (
-                <option key={colaborador.id} value={colaborador.id}>
-                  {colaborador.nome}
-                </option>
-              ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">Data</label>
-
-          <input
-            className="input w-full"
-            type="date"
-            name="data_advertencia"
-            value={form.data_advertencia}
-            onChange={atualizarCampo}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">Tipo</label>
-
-          <select
-            className="input w-full"
-            name="tipo"
-            value={form.tipo}
-            onChange={atualizarCampo}
-          >
-            <option value="Verbal">Verbal</option>
-            <option value="Escrita">Escrita</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">Motivo</label>
-
-          <input
-            className="input w-full"
-            name="motivo"
-            value={form.motivo}
-            onChange={atualizarCampo}
-            required
-          />
-        </div>
-
-        <div className="flex items-end gap-2">
-          <button
-            type="submit"
-            className="flex-1 bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl font-semibold transition"
-          >
-            {editando ? "Atualizar" : "Registrar"}
-          </button>
-
-          {editando && (
-            <button
-              type="button"
-              onClick={cancelarEdicao}
-              className="px-5 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700"
-            >
-              Cancelar
-            </button>
-          )}
-        </div>
-        </form>
+          onCancel={cancelarEdicao}
+          campos={[
+            {
+              name: "modelo",
+              label: "Tipo de advertência",
+              type: "select",
+              required: true,
+              options: modelosAdvertencia,
+            },
+            ...(form.modelo === "outro"
+              ? [
+                  {
+                    name: "modelo_outro",
+                    label: "Tipo personalizado",
+                    required: true,
+                    placeholder: "Ex.: Uso indevido de celular",
+                  },
+                ]
+              : []),
+            {
+              name: "data_advertencia",
+              label: "Data",
+              type: "date",
+              required: true,
+            },
+            {
+              name: "tipo",
+              label: "Tipo",
+              type: "select",
+              options: [
+                { value: "Verbal", label: "Verbal" },
+                { value: "Escrita", label: "Escrita" },
+              ],
+            },
+            {
+              name: "motivo",
+              label: "Motivo / descrição",
+              required: true,
+              type: "textarea",
+              className: "md:col-span-2",
+            },
+            {
+              name: "dias_ocorrencia",
+              label: "Dia(s) da ocorrência",
+              required: true,
+              placeholder: "Ex.: 12/08/2026 ou 12/08/2026 e 13/08/2026",
+              className: "md:col-span-2",
+            },
+            ...(form.modelo === "insubordinacao_ma_conduta"
+              ? [
+                  {
+                    name: "funcao_ocorrencia",
+                    label: "Função exercida na ocorrência",
+                    required: true,
+                  },
+                ]
+              : []),
+            {
+              name: "observacoes",
+              label: "Observações adicionais",
+              type: "textarea",
+              className: "md:col-span-5",
+            },
+          ]}
+        />
       )}
 
-      <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <input
-          className="input w-full"
-          placeholder="Buscar por colaborador ou motivo"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
-
-        <input
-          className="input w-full"
-          type="date"
-          value={dataInicio}
-          onChange={(e) => setDataInicio(e.target.value)}
-        />
-
-        <input
-          className="input w-full"
-          type="date"
-          value={dataFim}
-          onChange={(e) => setDataFim(e.target.value)}
-        />
-
-        <select
-          className="input w-full"
-          value={filtroTipo}
-          onChange={(e) => setFiltroTipo(e.target.value)}
-        >
-          <option value="todos">Todos os tipos</option>
-          <option value="Verbal">Verbal</option>
-          <option value="Escrita">Escrita</option>
-        </select>
-
-      </div>
+      <FiltrosOcorrencias
+        busca={busca}
+        placeholderBusca="Buscar por colaborador, tipo ou motivo"
+        dataInicio={dataInicio}
+        dataFim={dataFim}
+        hoje={hoje}
+        onBuscaChange={atualizarFiltro(setBusca)}
+        onDataInicioChange={atualizarFiltro(setDataInicio)}
+        onDataFimChange={atualizarFiltro(setDataFim)}
+        filtrosExtras={[
+          {
+            id: "tipo",
+            value: filtroTipo,
+            onChange: atualizarFiltro(setFiltroTipo),
+            options: [
+              { value: "todos", label: "Todos os tipos" },
+              { value: "Verbal", label: "Verbal" },
+              { value: "Escrita", label: "Escrita" },
+            ],
+          },
+        ]}
+      />
 
       <div className="mt-10 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-x-auto">
         <table className="w-full">
@@ -284,32 +277,34 @@ export default function Advertencias() {
               <th className="text-left p-4">Colaborador</th>
               <th className="text-left p-4">Data</th>
               <th className="text-left p-4">Tipo</th>
+              <th className="text-left p-4">Documento</th>
               <th className="text-left p-4">Motivo</th>
-              {podeGerenciar && <th className="text-left p-4">Acoes</th>}
+              {podeGerenciar && <th className="text-left p-4">Ações</th>}
             </tr>
           </thead>
 
           <tbody>
             {carregando && (
               <tr className="border-t border-zinc-800">
-                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 5 : 4}>
-                  Carregando advertencias...
+                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 6 : 5}>
+                  Carregando advertências...
                 </td>
               </tr>
             )}
 
-            {!carregando && advertenciasFiltradas.length === 0 && (
+            {!carregando && advertencias.length === 0 && (
               <tr className="border-t border-zinc-800">
-                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 5 : 4}>
-                  Nenhuma advertencia registrada.
+                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 6 : 5}>
+                  Nenhuma advertência registrada.
                 </td>
               </tr>
             )}
 
-            {!carregando && advertenciasFiltradas.map((advertencia) => (
+            {!carregando && advertencias.map((advertencia) => (
               <tr key={advertencia.id} className="border-t border-zinc-800">
                 <td className="p-4">
-                  {buscarNomeColaborador(advertencia.colaborador_id)}
+                  {buscarNomeColaborador(advertencia)}
+                  <AuditInfo registro={advertencia} compacto />
                 </td>
 
                 <td className="p-4">
@@ -328,6 +323,10 @@ export default function Advertencias() {
                   )}
                 </td>
 
+                <td className="p-4">
+                  {labelModeloRegistro(modelosAdvertencia, advertencia.detalhes)}
+                </td>
+
                 <td className="p-4">{advertencia.motivo}</td>
 
                 {podeGerenciar && (
@@ -340,8 +339,25 @@ export default function Advertencias() {
                           menuAberto === advertencia.id ? null : advertencia.id
                         )
                       }
-                      onEditar={() => editarAdvertencia(advertencia)}
-                      onExcluir={() => excluirAdvertencia(advertencia)}
+                      actions={[
+                        {
+                          label: "Editar",
+                          onClick: () => editarAdvertencia(advertencia),
+                        },
+                        {
+                          label: "Extrair PDF",
+                          onClick: () =>
+                            extrairPdfDisciplinar(
+                              "advertencia",
+                              advertencia,
+                              colaboradores
+                            ),
+                        },
+                        {
+                          label: "Excluir",
+                          onClick: () => excluirAdvertencia(advertencia),
+                        },
+                      ]}
                     />
                   </td>
                 )}
@@ -351,10 +367,18 @@ export default function Advertencias() {
         </table>
       </div>
 
+      <Paginacao
+        total={total}
+        pagina={pagina}
+        limitePorPagina={limitePorPagina}
+        onPaginaChange={setPagina}
+        textoTotal={`${total} advertência(s) encontrada(s)`}
+      />
+
       <ConfirmDialog
         aberto={Boolean(advertenciaParaExcluir)}
-        titulo="Excluir advertencia"
-        mensagem="Esta acao remove a advertencia definitivamente."
+        titulo="Excluir advertência"
+        mensagem="Esta ação remove a advertência do histórico."
         onCancelar={() => setAdvertenciaParaExcluir(null)}
         onConfirmar={confirmarExclusao}
       />

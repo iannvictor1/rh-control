@@ -6,6 +6,7 @@ export default function ActionMenu({
   onClose,
   onEditar,
   onExcluir,
+  actions,
 }) {
   const botaoRef = useRef(null);
   const menuRef = useRef(null);
@@ -60,7 +61,7 @@ export default function ActionMenu({
         type="button"
         className="action-menu-button"
         onClick={onToggle}
-        aria-label="Abrir acoes"
+        aria-label="Abrir ações"
       >
         <span />
         <span />
@@ -76,13 +77,30 @@ export default function ActionMenu({
             left: `${posicao.left}px`,
           }}
         >
-          <button type="button" onClick={onEditar}>
-            Editar
-          </button>
+          {actions ? (
+            actions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => {
+                  action.onClick();
+                  onClose?.();
+                }}
+              >
+                {action.label}
+              </button>
+            ))
+          ) : (
+            <>
+              <button type="button" onClick={onEditar}>
+                Editar
+              </button>
 
-          <button type="button" onClick={onExcluir}>
-            Excluir
-          </button>
+              <button type="button" onClick={onExcluir}>
+                Excluir
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

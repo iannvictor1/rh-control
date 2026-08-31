@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.auth import gerar_hash_senha, obter_admin_atual
@@ -40,8 +41,9 @@ def criar_usuario(
     dados: UsuarioAdminCreate,
     db: Session = Depends(get_db),
 ):
+    email_normalizado = dados.email.strip().lower()
     usuario_existente = db.query(Usuario).filter(
-        Usuario.email == dados.email
+        func.lower(Usuario.email) == email_normalizado
     ).first()
 
     if usuario_existente:
@@ -52,7 +54,7 @@ def criar_usuario(
 
     usuario = Usuario(
         nome=dados.nome,
-        email=dados.email,
+        email=email_normalizado,
         senha_hash=gerar_hash_senha(dados.senha),
         perfil=dados.perfil,
         ativo=True,
@@ -81,9 +83,11 @@ def atualizar_usuario(
             detail="Usuário não encontrado",
         )
 
-    if dados.email and dados.email != usuario.email:
+    if dados.email:
+        email_normalizado = dados.email.strip().lower()
         email_em_uso = db.query(Usuario).filter(
-            Usuario.email == dados.email
+            func.lower(Usuario.email) == email_normalizado,
+            Usuario.id != usuario.id,
         ).first()
 
         if email_em_uso:
@@ -94,6 +98,9 @@ def atualizar_usuario(
 
     campos = dados.model_dump(exclude_unset=True)
     senha = campos.pop("senha", None)
+
+    if "email" in campos:
+        campos["email"] = campos["email"].strip().lower()
 
     for campo, valor in campos.items():
         setattr(usuario, campo, valor)

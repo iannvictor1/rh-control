@@ -1,16 +1,23 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { canManageRh } from "../services/utils/auth";
+import { getApiErrorMessage } from "../services/utils/errors";
 
 import FiltrosColaboradores from "../components/colaboradores/FiltrosColaboradores";
 import TabelaColaboradores from "../components/colaboradores/TabelaColaboradores";
 import ModalColaborador from "../components/colaboradores/ModalColaborador";
+import ConfirmDialog from "../components/ConfirmDialog";
+import Paginacao from "../components/Paginacao";
 
 const formInicial = {
+  empresa: "",
   nome: "",
   matricula: "",
   cargo: "",
+  salario: "",
+  tipo_bonificacao: "",
+  bonificacao: "",
   setor: "",
   tipo_contrato: "",
   data_nascimento: "",
@@ -18,13 +25,34 @@ const formInicial = {
   cpf: "",
   data_admissao: "",
   data_desligamento: "",
+  motivo_desligamento_opcao: "",
+  motivo_desligamento: "",
   data_aso: "",
+  data_limite_ferias: "",
   endereco: "",
   email: "",
   telefone: "",
   telefone_emergencia: "",
   observacoes: "",
 };
+
+const motivosDesligamentoPadrao = [
+  "Pedido de Demissao",
+  "Demissao Sem Justa Causa",
+  "Demissao Por Justa Causa",
+  "Fim do Prazo Determinado",
+  "Termino Antecipado Contrato de Experiencia - Empregado",
+  "Termino Antecipado Contrato de Experiencia - Empregador",
+  "Rescisao em Comum Acordo",
+];
+
+function obterOpcaoMotivoDesligamento(motivo) {
+  if (!motivo) {
+    return "";
+  }
+
+  return motivosDesligamentoPadrao.includes(motivo) ? motivo : "Outro";
+}
 
 function formatarCPF(valor) {
   return valor
@@ -51,23 +79,47 @@ export default function Colaboradores() {
 
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [pagina, setPagina] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [carregando, setCarregando] = useState(false);
+  const [colaboradorParaInativar, setColaboradorParaInativar] = useState(null);
 
   const [form, setForm] = useState(formInicial);
+  const inputImportacaoRef = useRef(null);
+  const inputImportacaoFeriasRef = useRef(null);
   const podeGerenciar = canManageRh();
+  const limitePorPagina = 10;
 
-  async function carregarColaboradores() {
-    const response = await api.get("/colaboradores/");
-    setColaboradores(response.data);
-  }
+  const carregarColaboradores = useCallback(async () => {
+    setCarregando(true);
+
+    try {
+      const response = await api.get("/colaboradores/busca", {
+        params: {
+          q: busca || undefined,
+          status: filtroStatus,
+          skip: (pagina - 1) * limitePorPagina,
+          limit: limitePorPagina,
+        },
+      });
+
+      setColaboradores(response.data.items);
+      setTotal(response.data.total);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao carregar colaboradores."));
+      console.error(error);
+    } finally {
+      setCarregando(false);
+    }
+  }, [busca, filtroStatus, pagina]);
 
   useEffect(() => {
-    async function carregarDadosIniciais() {
-      const response = await api.get("/colaboradores/");
-      setColaboradores(response.data);
-    }
+    const timeoutId = window.setTimeout(() => {
+      carregarColaboradores();
+    }, 0);
 
-    carregarDadosIniciais();
-  }, []);
+    return () => window.clearTimeout(timeoutId);
+  }, [carregarColaboradores]);
 
   function atualizarCampo(e) {
     const { name, value } = e.target;
@@ -78,8 +130,40 @@ export default function Colaboradores() {
       valorFormatado = formatarCPF(value);
     }
 
+    if (name === "rg") {
+      valorFormatado = value.replace(/\D/g, "");
+    }
+
     if (name === "telefone" || name === "telefone_emergencia") {
       valorFormatado = formatarTelefone(value);
+    }
+
+    if (name === "tipo_bonificacao") {
+      setForm({
+        ...form,
+        tipo_bonificacao: value,
+        bonificacao: value === "Fixa" ? form.bonificacao : "",
+      });
+      return;
+    }
+
+    if (name === "data_desligamento" && !value) {
+      setForm({
+        ...form,
+        data_desligamento: "",
+        motivo_desligamento_opcao: "",
+        motivo_desligamento: "",
+      });
+      return;
+    }
+
+    if (name === "motivo_desligamento_opcao") {
+      setForm({
+        ...form,
+        motivo_desligamento_opcao: value,
+        motivo_desligamento: value === "Outro" ? "" : value,
+      });
+      return;
     }
 
     setForm({
@@ -100,9 +184,13 @@ export default function Colaboradores() {
     setColaboradorEditando(colaborador);
 
     setForm({
+      empresa: colaborador.empresa || "",
       nome: colaborador.nome || "",
       matricula: colaborador.matricula || "",
       cargo: colaborador.cargo || "",
+      salario: colaborador.salario || "",
+      tipo_bonificacao: colaborador.tipo_bonificacao || "",
+      bonificacao: colaborador.bonificacao || "",
       setor: colaborador.setor || "",
       tipo_contrato: colaborador.tipo_contrato || "",
       data_nascimento: colaborador.data_nascimento || "",
@@ -110,7 +198,12 @@ export default function Colaboradores() {
       cpf: colaborador.cpf || "",
       data_admissao: colaborador.data_admissao || "",
       data_desligamento: colaborador.data_desligamento || "",
+      motivo_desligamento_opcao: obterOpcaoMotivoDesligamento(
+        colaborador.motivo_desligamento
+      ),
+      motivo_desligamento: colaborador.motivo_desligamento || "",
       data_aso: colaborador.data_aso || "",
+      data_limite_ferias: colaborador.data_limite_ferias || "",
       endereco: colaborador.endereco || "",
       email: colaborador.email || "",
       telefone: colaborador.telefone || "",
@@ -128,10 +221,20 @@ export default function Colaboradores() {
       const dados = {
         ...form,
         data_nascimento: form.data_nascimento || null,
+        salario: form.salario || null,
+        tipo_bonificacao: form.tipo_bonificacao || null,
+        bonificacao: form.tipo_bonificacao === "Fixa"
+          ? form.bonificacao || null
+          : null,
         data_admissao: form.data_admissao || null,
         data_desligamento: form.data_desligamento || null,
+        motivo_desligamento: form.data_desligamento
+          ? form.motivo_desligamento
+          : null,
         data_aso: form.data_aso || null,
+        data_limite_ferias: form.data_limite_ferias || null,
       };
+      delete dados.motivo_desligamento_opcao;
 
       if (modoEdicao) {
         await api.put(`/colaboradores/${colaboradorEditando.id}`, dados);
@@ -148,22 +251,25 @@ export default function Colaboradores() {
 
       carregarColaboradores();
     } catch (error) {
-      toast.error("Erro ao salvar colaborador.");
+      toast.error(getApiErrorMessage(error, "Erro ao salvar colaborador."));
       console.error(error);
     }
   }
 
-  async function inativarColaborador(id) {
-    const confirmar = confirm("Deseja realmente inativar este colaborador?");
+  function pedirInativacaoColaborador(colaborador) {
+    setColaboradorParaInativar(colaborador);
+  }
 
-    if (!confirmar) return;
+  async function confirmarInativacaoColaborador() {
+    if (!colaboradorParaInativar) return;
 
     try {
-      await api.patch(`/colaboradores/${id}/inativar`);
+      await api.patch(`/colaboradores/${colaboradorParaInativar.id}/inativar`);
       toast.success("Colaborador inativado com sucesso!");
+      setColaboradorParaInativar(null);
       carregarColaboradores();
     } catch (error) {
-      toast.error("Erro ao inativar colaborador.");
+      toast.error(getApiErrorMessage(error, "Erro ao inativar colaborador."));
       console.error(error);
     }
   }
@@ -174,29 +280,86 @@ export default function Colaboradores() {
       toast.success("Colaborador ativado com sucesso!");
       carregarColaboradores();
     } catch (error) {
-      toast.error("Erro ao ativar colaborador.");
+      toast.error(getApiErrorMessage(error, "Erro ao ativar colaborador."));
       console.error(error);
     }
   }
 
-  const colaboradoresFiltrados = colaboradores.filter((colaborador) => {
-    const textoBusca = busca.toLowerCase();
+  async function importarColaboradores(e) {
+    const arquivo = e.target.files?.[0];
 
-    const correspondeBusca =
-      colaborador.nome?.toLowerCase().includes(textoBusca) ||
-      colaborador.matricula?.toLowerCase().includes(textoBusca) ||
-      colaborador.cargo?.toLowerCase().includes(textoBusca) ||
-      colaborador.setor?.toLowerCase().includes(textoBusca) ||
-      colaborador.cpf?.toLowerCase().includes(textoBusca) ||
-      colaborador.telefone?.toLowerCase().includes(textoBusca);
+    if (!arquivo) {
+      return;
+    }
 
-    const correspondeStatus =
-      filtroStatus === "todos" ||
-      (filtroStatus === "ativos" && colaborador.ativo) ||
-      (filtroStatus === "inativos" && !colaborador.ativo);
+    const dados = new FormData();
+    dados.append("arquivo", arquivo);
 
-    return correspondeBusca && correspondeStatus;
-  });
+    try {
+      const response = await api.post("/colaboradores/importar", dados, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      const { importados, ignorados, erros } = response.data;
+
+      toast.success(
+        `${importados} colaborador(es) importado(s). ${ignorados} linha(s) ignorada(s).`
+      );
+
+      if (erros.length > 0) {
+        const primeiroErro = erros[0];
+        toast.error(
+          `${erros.length} linha(s) não foram importadas. Linha ${primeiroErro.linha}: ${primeiroErro.erro}`
+        );
+      }
+
+      carregarColaboradores();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao importar planilha."));
+      console.error(error);
+    } finally {
+      e.target.value = "";
+    }
+  }
+
+  async function importarFeriasPdf(e) {
+    const arquivo = e.target.files?.[0];
+
+    if (!arquivo) {
+      return;
+    }
+
+    const dados = new FormData();
+    dados.append("arquivo", arquivo);
+
+    try {
+      const response = await api.post("/colaboradores/importar-ferias-pdf", dados, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      const { importados, ignorados, erros } = response.data;
+
+      toast.success(
+        `${importados} data(s) limite de férias importada(s). ${ignorados} registro(s) ignorado(s).`
+      );
+
+      if (erros.length > 0) {
+        const primeiroErro = erros[0];
+        toast.error(
+          `${erros.length} registro(s) não foram importados. ${primeiroErro.erro}`
+        );
+      }
+
+      carregarColaboradores();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao importar PDF de férias."));
+      console.error(error);
+    } finally {
+      e.target.value = "";
+    }
+  }
 
   return (
     <>
@@ -204,28 +367,77 @@ export default function Colaboradores() {
         <h2 className="text-3xl md:text-4xl font-bold">Colaboradores</h2>
 
         {podeGerenciar && (
-          <button
-            onClick={abrirCadastro}
-            className="bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl font-semibold transition"
-          >
-            Novo Colaborador
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              ref={inputImportacaoRef}
+              type="file"
+              accept=".xlsx"
+              onChange={importarColaboradores}
+              className="hidden"
+            />
+
+            <input
+              ref={inputImportacaoFeriasRef}
+              type="file"
+              accept=".pdf"
+              onChange={importarFeriasPdf}
+              className="hidden"
+            />
+
+            <button
+              type="button"
+              onClick={() => inputImportacaoRef.current?.click()}
+              className="bg-zinc-800 hover:bg-zinc-700 px-5 py-3 rounded-xl font-semibold transition"
+            >
+              Importar planilha
+            </button>
+
+            <button
+              type="button"
+              onClick={() => inputImportacaoFeriasRef.current?.click()}
+              className="bg-zinc-800 hover:bg-zinc-700 px-5 py-3 rounded-xl font-semibold transition"
+            >
+              Importar férias PDF
+            </button>
+
+            <button
+              onClick={abrirCadastro}
+              className="bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl font-semibold transition"
+            >
+              Novo Colaborador
+            </button>
+          </div>
         )}
       </div>
 
       <FiltrosColaboradores
         busca={busca}
-        setBusca={setBusca}
+        setBusca={(valor) => {
+          setBusca(valor);
+          setPagina(1);
+        }}
         filtroStatus={filtroStatus}
-        setFiltroStatus={setFiltroStatus}
+        setFiltroStatus={(valor) => {
+          setFiltroStatus(valor);
+          setPagina(1);
+        }}
       />
 
       <TabelaColaboradores
-        colaboradores={colaboradoresFiltrados}
+        colaboradores={colaboradores}
         abrirEdicao={abrirEdicao}
-        inativarColaborador={inativarColaborador}
+        inativarColaborador={pedirInativacaoColaborador}
         ativarColaborador={ativarColaborador}
         podeGerenciar={podeGerenciar}
+        carregando={carregando}
+      />
+
+      <Paginacao
+        total={total}
+        pagina={pagina}
+        limitePorPagina={limitePorPagina}
+        onPaginaChange={setPagina}
+        textoTotal={`${total} colaborador(es) encontrado(s)`}
       />
 
       {podeGerenciar && (
@@ -236,8 +448,18 @@ export default function Colaboradores() {
           salvarColaborador={salvarColaborador}
           form={form}
           atualizarCampo={atualizarCampo}
+          motivosDesligamentoPadrao={motivosDesligamentoPadrao}
         />
       )}
+
+      <ConfirmDialog
+        aberto={Boolean(colaboradorParaInativar)}
+        titulo="Inativar colaborador"
+        mensagem={`Deseja realmente inativar ${colaboradorParaInativar?.nome || "este colaborador"}?`}
+        textoConfirmar="Inativar"
+        onCancelar={() => setColaboradorParaInativar(null)}
+        onConfirmar={confirmarInativacaoColaborador}
+      />
     </>
   );
 }

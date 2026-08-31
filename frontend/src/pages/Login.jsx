@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../services/api";
-import { useEffect } from "react";
+import { getToken, setToken } from "../services/utils/auth";
+import { getApiErrorMessage } from "../services/utils/errors";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -15,30 +16,31 @@ export default function Login() {
 
     try {
       const response = await api.post("/auth/login", {
-        email,
+        email: email.trim(),
         senha,
       });
 
-      localStorage.setItem(
-        "token",
-        response.data.access_token
-      );
+      setToken(response.data.access_token);
 
       toast.success("Login realizado!");
 
       navigate("/");
-    } catch {
-      toast.error("E-mail ou senha inválidos");
+    } catch (error) {
+      const mensagem = error.response
+        ? getApiErrorMessage(error, "Não foi possível entrar.")
+        : "Não foi possível conectar ao servidor.";
+
+      toast.error(mensagem);
     }
   }
 
   useEffect(() => {
-  const token = localStorage.getItem("token");
+    const token = getToken();
 
-  if (token) {
-    navigate("/");
-  }
-}, [navigate]);
+    if (token) {
+      navigate("/");
+    }
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">

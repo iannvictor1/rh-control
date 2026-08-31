@@ -1,4 +1,7 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import ActionMenu from "../ActionMenu";
+import { formatarMoeda } from "../../services/utils/formatters";
 
 function formatarData(data) {
   if (!data) return "Não informado";
@@ -54,15 +57,52 @@ export default function TabelaColaboradores({
   inativarColaborador,
   ativarColaborador,
   podeGerenciar = true,
+  carregando = false,
 }) {
+  const navigate = useNavigate();
+  const [menuAberto, setMenuAberto] = useState(null);
+
+  function montarAcoes(colaborador) {
+    const actions = [
+      {
+        label: "Histórico",
+        onClick: () => navigate(`/colaboradores/${colaborador.id}`),
+      },
+    ];
+
+    if (podeGerenciar) {
+      actions.push({
+        label: "Editar",
+        onClick: () => abrirEdicao(colaborador),
+      });
+
+      actions.push({
+        label: colaborador.ativo ? "Inativar" : "Ativar",
+        onClick: () => {
+          if (colaborador.ativo) {
+            inativarColaborador(colaborador);
+            return;
+          }
+
+          ativarColaborador(colaborador.id);
+        },
+      });
+    }
+
+    return actions;
+  }
+
   return (
     <div className="mt-10 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-x-auto">
       <table className="w-full">
         <thead className="bg-zinc-800">
           <tr>
             <th className="text-left p-4">Nome</th>
-            <th className="text-left p-4">Matricula</th>
+            <th className="text-left p-4">Empresa</th>
+            <th className="text-left p-4">Matrícula</th>
             <th className="text-left p-4">Cargo/Setor</th>
+            <th className="text-left p-4">Salário</th>
+            <th className="text-left p-4">Bonificação</th>
             <th className="text-left p-4">CPF</th>
             <th className="text-left p-4">Telefone</th>
             <th className="text-left p-4">ASO</th>
@@ -72,17 +112,43 @@ export default function TabelaColaboradores({
         </thead>
 
         <tbody>
-          {colaboradores.map((colaborador) => {
+          {carregando && (
+            <tr className="border-t border-zinc-800">
+              <td className="p-6 text-center text-zinc-400" colSpan={11}>
+                Carregando colaboradores...
+              </td>
+            </tr>
+          )}
+
+          {!carregando && colaboradores.length === 0 && (
+            <tr className="border-t border-zinc-800">
+              <td className="p-6 text-center text-zinc-400" colSpan={11}>
+                Nenhum colaborador encontrado.
+              </td>
+            </tr>
+          )}
+
+          {!carregando && colaboradores.map((colaborador) => {
             const aso = statusAso(colaborador);
 
             return (
               <tr key={colaborador.id} className="border-t border-zinc-800">
                 <td className="p-4">{colaborador.nome}</td>
+                <td className="p-4">{colaborador.empresa || "-"}</td>
                 <td className="p-4">{colaborador.matricula || "-"}</td>
                 <td className="p-4">
                   <div>{colaborador.cargo || "-"}</div>
                   <div className="text-sm text-zinc-500">
                     {colaborador.setor || "-"}
+                  </div>
+                </td>
+                <td className="p-4 whitespace-nowrap">
+                  {formatarMoeda(colaborador.salario)}
+                </td>
+                <td className="p-4 whitespace-nowrap">
+                  <div>{colaborador.tipo_bonificacao || "-"}</div>
+                  <div className="text-sm text-zinc-500">
+                    {formatarMoeda(colaborador.bonificacao)}
                   </div>
                 </td>
                 <td className="p-4">{colaborador.cpf || "-"}</td>
@@ -106,40 +172,17 @@ export default function TabelaColaboradores({
                   )}
                 </td>
 
-                <td className="p-4 flex gap-2">
-                  <Link
-                    to={`/colaboradores/${colaborador.id}`}
-                    className="px-3 py-2 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
-                  >
-                    Histórico
-                  </Link>
-
-                  {podeGerenciar && (
-                    <button
-                      onClick={() => abrirEdicao(colaborador)}
-                      className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700"
-                    >
-                      Editar
-                    </button>
-                  )}
-
-                  {podeGerenciar && colaborador.ativo && (
-                    <button
-                      onClick={() => inativarColaborador(colaborador.id)}
-                      className="px-3 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30"
-                    >
-                      Inativar
-                    </button>
-                  )}
-
-                  {podeGerenciar && !colaborador.ativo && (
-                    <button
-                      onClick={() => ativarColaborador(colaborador.id)}
-                      className="px-3 py-2 rounded-lg bg-green-600/20 text-green-400 hover:bg-green-600/30"
-                    >
-                      Ativar
-                    </button>
-                  )}
+                <td className="p-4">
+                  <ActionMenu
+                    aberto={menuAberto === colaborador.id}
+                    onClose={() => setMenuAberto(null)}
+                    onToggle={() =>
+                      setMenuAberto(
+                        menuAberto === colaborador.id ? null : colaborador.id
+                      )
+                    }
+                    actions={montarAcoes(colaborador)}
+                  />
                 </td>
               </tr>
             );

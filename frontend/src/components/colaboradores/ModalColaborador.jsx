@@ -19,6 +19,15 @@ function calcularVencimentoAso(dataAso) {
   return data.toISOString().slice(0, 10);
 }
 
+function obterDataHoje() {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+  const dia = String(hoje.getDate()).padStart(2, "0");
+
+  return `${ano}-${mes}-${dia}`;
+}
+
 export default function ModalColaborador({
   modalAberto,
   setModalAberto,
@@ -26,10 +35,12 @@ export default function ModalColaborador({
   salvarColaborador,
   form,
   atualizarCampo,
+  motivosDesligamentoPadrao,
 }) {
   if (!modalAberto) return null;
 
   const vencimentoAso = calcularVencimentoAso(form.data_aso);
+  const dataMaxima = obterDataHoje();
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -52,6 +63,20 @@ export default function ModalColaborador({
           onSubmit={salvarColaborador}
           className="grid grid-cols-2 gap-4"
         >
+          <Campo label="Empresa">
+            <select
+              className="input w-full"
+              name="empresa"
+              value={form.empresa}
+              onChange={atualizarCampo}
+              required
+            >
+              <option value="">Selecione</option>
+              <option value="C&M">C&M</option>
+              <option value="Frontline">Frontline</option>
+            </select>
+          </Campo>
+
           <Campo label="Nome">
             <input
               className="input w-full"
@@ -62,12 +87,11 @@ export default function ModalColaborador({
             />
           </Campo>
 
-          <Campo label="Matricula">
+          <Campo label="Matrícula">
             <input
-              className="input w-full"
-              name="matricula"
-              value={form.matricula}
-              onChange={atualizarCampo}
+              className="input w-full text-zinc-400"
+              value={form.matricula || "Gerada automaticamente"}
+              readOnly
             />
           </Campo>
 
@@ -79,6 +103,47 @@ export default function ModalColaborador({
               onChange={atualizarCampo}
             />
           </Campo>
+
+          <Campo label="Salário">
+            <input
+              className="input w-full"
+              type="number"
+              min="0"
+              step="0.01"
+              name="salario"
+              value={form.salario}
+              onChange={atualizarCampo}
+            />
+          </Campo>
+
+          <Campo label="Tipo de bonificação">
+            <select
+              className="input w-full"
+              name="tipo_bonificacao"
+              value={form.tipo_bonificacao}
+              onChange={atualizarCampo}
+              required
+            >
+              <option value="">Selecione</option>
+              <option value="Fixa">Fixa</option>
+              <option value="Variavel">Variável</option>
+            </select>
+          </Campo>
+
+          {form.tipo_bonificacao === "Fixa" && (
+            <Campo label="Bonificação">
+              <input
+                className="input w-full"
+                type="number"
+                min="0"
+                step="0.01"
+                name="bonificacao"
+                value={form.bonificacao}
+                onChange={atualizarCampo}
+                required
+              />
+            </Campo>
+          )}
 
           <Campo label="Setor">
             <input
@@ -99,8 +164,8 @@ export default function ModalColaborador({
               <option value="">Selecione</option>
               <option value="CLT">CLT</option>
               <option value="PJ">PJ</option>
-              <option value="Temporario">Temporario</option>
-              <option value="Estagio">Estagio</option>
+              <option value="Temporario">Temporário</option>
+              <option value="Estagio">Estágio</option>
               <option value="Terceirizado">Terceirizado</option>
             </select>
           </Campo>
@@ -130,6 +195,7 @@ export default function ModalColaborador({
               name="data_nascimento"
               value={form.data_nascimento}
               onChange={atualizarCampo}
+              max={dataMaxima}
             />
           </Campo>
 
@@ -140,6 +206,7 @@ export default function ModalColaborador({
               name="data_admissao"
               value={form.data_admissao}
               onChange={atualizarCampo}
+              max={dataMaxima}
             />
           </Campo>
 
@@ -150,6 +217,7 @@ export default function ModalColaborador({
               name="data_aso"
               value={form.data_aso}
               onChange={atualizarCampo}
+              max={dataMaxima}
             />
           </Campo>
 
@@ -160,14 +228,59 @@ export default function ModalColaborador({
               name="data_desligamento"
               value={form.data_desligamento}
               onChange={atualizarCampo}
+              max={dataMaxima}
             />
           </Campo>
+
+          {form.data_desligamento && (
+            <>
+              <Campo label="Motivo do desligamento">
+                <select
+                  className="input w-full"
+                  name="motivo_desligamento_opcao"
+                  value={form.motivo_desligamento_opcao}
+                  onChange={atualizarCampo}
+                  required
+                >
+                  <option value="">Selecione</option>
+                  {motivosDesligamentoPadrao.map((motivo) => (
+                    <option key={motivo} value={motivo}>
+                      {motivo}
+                    </option>
+                  ))}
+                  <option value="Outro">Outro</option>
+                </select>
+              </Campo>
+
+              {form.motivo_desligamento_opcao === "Outro" && (
+                <Campo label="Descreva o motivo">
+                  <input
+                    className="input w-full"
+                    name="motivo_desligamento"
+                    value={form.motivo_desligamento}
+                    onChange={atualizarCampo}
+                    required
+                  />
+                </Campo>
+              )}
+            </>
+          )}
 
           <Campo label="Vencimento do ASO">
             <input
               className="input w-full text-zinc-400"
               value={vencimentoAso || "Calculado 12 meses após o ASO"}
               readOnly
+            />
+          </Campo>
+
+          <Campo label="Data limite de férias">
+            <input
+              className="input w-full"
+              type="date"
+              name="data_limite_ferias"
+              value={form.data_limite_ferias}
+              onChange={atualizarCampo}
             />
           </Campo>
 
@@ -211,7 +324,7 @@ export default function ModalColaborador({
           </div>
 
           <div className="col-span-2">
-            <Campo label="Observacoes">
+            <Campo label="Observações">
               <textarea
                 className="input w-full min-h-24"
                 name="observacoes"

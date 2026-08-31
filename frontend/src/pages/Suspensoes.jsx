@@ -1,62 +1,164 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import ActionMenu from "../components/ActionMenu";
+import AuditInfo from "../components/AuditInfo";
 import ConfirmDialog from "../components/ConfirmDialog";
+import FiltrosOcorrencias from "../components/FiltrosOcorrencias";
+import FormOcorrencia from "../components/FormOcorrencia";
+import Paginacao from "../components/Paginacao";
+import useBuscaPaginada from "../hooks/useBuscaPaginada";
 import api from "../services/api";
 import { canManageRh } from "../services/utils/auth";
-import { dataDentroPeriodo, formatarData } from "../services/utils/formatters";
+import {
+  dataRetorno,
+  extrairPdfDisciplinar,
+  labelModeloRegistro,
+  modelosSuspensao,
+} from "../services/utils/documentosDisciplinares";
+import { getApiErrorMessage } from "../services/utils/errors";
+import { formatarData } from "../services/utils/formatters";
 
 const formInicial = {
   colaborador_id: "",
+  modelo: "falta_injustificada",
+  modelo_outro: "",
+  data_advertencia_anterior: "",
+  dias_ocorrencia: "",
+  horario_ocorrencia: "",
   data_inicio: "",
   dias: "",
   motivo: "",
+  observacoes: "",
   status: "Ativa",
 };
 
 export default function Suspensoes() {
-  const [suspensoes, setSuspensoes] = useState([]);
   const [colaboradores, setColaboradores] = useState([]);
   const [form, setForm] = useState(formInicial);
   const [editando, setEditando] = useState(null);
   const [menuAberto, setMenuAberto] = useState(null);
-  const [carregando, setCarregando] = useState(true);
   const [suspensaoParaExcluir, setSuspensaoParaExcluir] = useState(null);
   const [busca, setBusca] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const podeGerenciar = canManageRh();
+  const hoje = new Date().toISOString().slice(0, 10);
+  const camposSuspensao = [
+    {
+      name: "modelo",
+      label: "Tipo de suspensão",
+      type: "select",
+      required: true,
+      options: modelosSuspensao,
+    },
+    ...(form.modelo === "outro"
+      ? [
+          {
+            name: "modelo_outro",
+            label: "Tipo personalizado",
+            required: true,
+            placeholder: "Ex.: Descumprimento de procedimento interno",
+          },
+        ]
+      : []),
+    {
+      name: "data_advertencia_anterior",
+      label: "Data da advertência anterior",
+      type: "date",
+      required: true,
+    },
+    {
+      name: "dias_ocorrencia",
+      label: "Dia(s) da reincidência",
+      required: true,
+      placeholder: "Ex.: 12/08/2026 ou 12/08/2026 e 13/08/2026",
+    },
+    ...(form.modelo === "abandono_posto"
+      ? [
+          {
+            name: "horario_ocorrencia",
+            label: "Horário da ocorrência",
+            type: "time",
+            required: true,
+          },
+        ]
+      : []),
+    {
+      name: "data_inicio",
+      label: "Data de início",
+      type: "date",
+      required: true,
+    },
+    {
+      name: "dias",
+      label: "Dias",
+      type: "number",
+      min: "1",
+      required: true,
+    },
+    {
+      name: "motivo",
+      label: "Motivo / descrição",
+      required: true,
+      type: "textarea",
+      className: "md:col-span-2",
+    },
+    {
+      name: "observacoes",
+      label: "Observações adicionais",
+      type: "textarea",
+      className: "md:col-span-3",
+    },
+  ];
 
-  async function carregarDados() {
-    const [resSuspensoes, resColaboradores] = await Promise.all([
-      api.get("/suspensoes/"),
-      api.get("/colaboradores/"),
-    ]);
-
-    setSuspensoes(resSuspensoes.data);
-    setColaboradores(resColaboradores.data);
+  if (editando) {
+    camposSuspensao.push({
+      name: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "Ativa", label: "Ativa" },
+        { value: "Finalizada", label: "Finalizada" },
+        { value: "Cancelada", label: "Cancelada" },
+      ],
+    });
   }
 
-  useEffect(() => {
-    async function carregarDadosIniciais() {
-      try {
-        const [resSuspensoes, resColaboradores] = await Promise.all([
-          api.get("/suspensoes/"),
-          api.get("/colaboradores/"),
-        ]);
+  const filtros = useMemo(() => ({
+    q: busca,
+    status: filtroStatus,
+    data_inicio: dataInicio,
+    data_fim: dataFim,
+  }), [busca, dataInicio, dataFim, filtroStatus]);
 
-        setSuspensoes(resSuspensoes.data);
-        setColaboradores(resColaboradores.data);
+  const {
+    items: suspensoes,
+    total,
+    pagina,
+    setPagina,
+    carregando,
+    limitePorPagina,
+    carregar: carregarSuspensoes,
+    atualizarFiltro,
+  } = useBuscaPaginada({
+    endpoint: "/suspensoes/busca",
+    filtros,
+    mensagemErro: "Erro ao carregar suspensões.",
+  });
+
+  useEffect(() => {
+    async function carregarColaboradores() {
+      try {
+        const response = await api.get("/colaboradores/");
+        setColaboradores(response.data);
       } catch (error) {
-        toast.error("Erro ao carregar suspensoes.");
+        toast.error("Erro ao carregar colaboradores.");
         console.error(error);
-      } finally {
-        setCarregando(false);
       }
     }
 
-    carregarDadosIniciais();
+    carregarColaboradores();
   }, []);
 
   function atualizarCampo(e) {
@@ -66,9 +168,8 @@ export default function Suspensoes() {
     });
   }
 
-  function buscarNomeColaborador(id) {
-    const colaborador = colaboradores.find((c) => c.id === id);
-    return colaborador ? colaborador.nome : "Nao encontrado";
+  function buscarNomeColaborador(registro) {
+    return registro.colaborador?.nome || "Colaborador não encontrado";
   }
 
   function editarSuspensao(suspensao) {
@@ -76,9 +177,15 @@ export default function Suspensoes() {
     setMenuAberto(null);
     setForm({
       colaborador_id: String(suspensao.colaborador_id),
+      modelo: suspensao.detalhes?.modelo || "falta_injustificada",
+      modelo_outro: suspensao.detalhes?.modelo_outro || "",
+      data_advertencia_anterior: suspensao.detalhes?.data_advertencia_anterior || "",
+      dias_ocorrencia: suspensao.detalhes?.dias_ocorrencia || "",
+      horario_ocorrencia: suspensao.detalhes?.horario_ocorrencia || "",
       data_inicio: suspensao.data_inicio || "",
       dias: String(suspensao.dias || ""),
       motivo: suspensao.motivo || "",
+      observacoes: suspensao.detalhes?.observacoes || "",
       status: suspensao.status || "Ativa",
     });
   }
@@ -96,6 +203,15 @@ export default function Suspensoes() {
       data_inicio: form.data_inicio,
       dias: Number(form.dias),
       motivo: form.motivo,
+      detalhes: {
+        modelo: form.modelo,
+        modelo_outro: form.modelo_outro,
+        data_advertencia_anterior: form.data_advertencia_anterior,
+        dias_ocorrencia: form.dias_ocorrencia,
+        horario_ocorrencia: form.horario_ocorrencia,
+        data_retorno: dataRetorno(form.data_inicio, form.dias),
+        observacoes: form.observacoes,
+      },
     };
 
     if (editando) {
@@ -105,21 +221,21 @@ export default function Suspensoes() {
     try {
       if (editando) {
         await api.put(`/suspensoes/${editando.id}`, dados);
-        toast.success("Suspensao atualizada!");
+        toast.success("Suspensão atualizada!");
       } else {
         await api.post("/suspensoes/", dados);
-        toast.success("Suspensao registrada!");
+        toast.success("Suspensão registrada!");
       }
 
       cancelarEdicao();
-      carregarDados();
+      carregarSuspensoes();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao salvar suspensao.");
+      toast.error(getApiErrorMessage(error, "Erro ao salvar suspensão."));
       console.error(error);
     }
   }
 
-  async function excluirSuspensao(suspensao) {
+  function excluirSuspensao(suspensao) {
     setMenuAberto(null);
     setSuspensaoParaExcluir(suspensao);
   }
@@ -129,233 +245,104 @@ export default function Suspensoes() {
 
     try {
       await api.delete(`/suspensoes/${suspensaoParaExcluir.id}`);
-      toast.success("Suspensao excluida!");
+      toast.success("Suspensão excluída!");
 
       if (editando?.id === suspensaoParaExcluir.id) {
         cancelarEdicao();
       }
 
       setSuspensaoParaExcluir(null);
-      carregarDados();
+      carregarSuspensoes();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao excluir suspensao.");
+      toast.error(getApiErrorMessage(error, "Erro ao excluir suspensão."));
       console.error(error);
     }
   }
 
-  const suspensoesFiltradas = suspensoes.filter((suspensao) => {
-    const textoBusca = busca.toLowerCase();
-    const nome = buscarNomeColaborador(suspensao.colaborador_id).toLowerCase();
-    const motivo = (suspensao.motivo || "").toLowerCase();
-    const statusOk =
-      filtroStatus === "todos" || suspensao.status === filtroStatus;
-
-    return (
-      statusOk &&
-      (nome.includes(textoBusca) || motivo.includes(textoBusca)) &&
-      dataDentroPeriodo(suspensao.data_inicio, dataInicio, dataFim)
-    );
-  });
-
   return (
     <>
-      <h2 className="text-4xl font-bold">Suspensoes</h2>
+      <h2 className="text-4xl font-bold">Suspensões</h2>
 
       {podeGerenciar && (
-        <form
+        <FormOcorrencia
+          form={form}
+          editando={editando}
+          colaboradores={colaboradores}
+          hoje={hoje}
+          onChange={atualizarCampo}
           onSubmit={salvarSuspensao}
-          className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 grid grid-cols-5 gap-4"
-        >
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">
-            Colaborador
-          </label>
-
-          <select
-            className="input w-full"
-            name="colaborador_id"
-            value={form.colaborador_id}
-            onChange={atualizarCampo}
-            required
-          >
-            <option value="">Selecione</option>
-
-            {colaboradores
-              .filter((colaborador) => colaborador.ativo)
-              .map((colaborador) => (
-                <option key={colaborador.id} value={colaborador.id}>
-                  {colaborador.nome}
-                </option>
-              ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">
-            Data inicio
-          </label>
-
-          <input
-            className="input w-full"
-            type="date"
-            name="data_inicio"
-            value={form.data_inicio}
-            onChange={atualizarCampo}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">Dias</label>
-
-          <input
-            className="input w-full"
-            type="number"
-            min="1"
-            name="dias"
-            value={form.dias}
-            onChange={atualizarCampo}
-            required
-          />
-        </div>
-
-        {editando ? (
-          <div>
-            <label className="text-sm text-zinc-400 mb-1 block">Status</label>
-
-            <select
-              className="input w-full"
-              name="status"
-              value={form.status}
-              onChange={atualizarCampo}
-            >
-              <option value="Ativa">Ativa</option>
-              <option value="Finalizada">Finalizada</option>
-              <option value="Cancelada">Cancelada</option>
-            </select>
-          </div>
-        ) : (
-          <div>
-            <label className="text-sm text-zinc-400 mb-1 block">Motivo</label>
-
-            <input
-              className="input w-full"
-              name="motivo"
-              value={form.motivo}
-              onChange={atualizarCampo}
-              required
-            />
-          </div>
-        )}
-
-        <div className="flex items-end gap-2">
-          <button
-            type="submit"
-            className="flex-1 bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl font-semibold transition"
-          >
-            {editando ? "Atualizar" : "Registrar"}
-          </button>
-
-          {editando && (
-            <button
-              type="button"
-              onClick={cancelarEdicao}
-              className="px-5 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700"
-            >
-              Cancelar
-            </button>
-          )}
-        </div>
-
-        {editando && (
-          <div className="col-span-5">
-            <label className="text-sm text-zinc-400 mb-1 block">Motivo</label>
-
-            <input
-              className="input w-full"
-              name="motivo"
-              value={form.motivo}
-              onChange={atualizarCampo}
-              required
-            />
-          </div>
-        )}
-        </form>
+          onCancel={cancelarEdicao}
+          campos={camposSuspensao}
+        />
       )}
 
-      <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <input
-          className="input w-full"
-          placeholder="Buscar por colaborador ou motivo"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
-
-        <input
-          className="input w-full"
-          type="date"
-          value={dataInicio}
-          onChange={(e) => setDataInicio(e.target.value)}
-        />
-
-        <input
-          className="input w-full"
-          type="date"
-          value={dataFim}
-          onChange={(e) => setDataFim(e.target.value)}
-        />
-
-        <select
-          className="input w-full"
-          value={filtroStatus}
-          onChange={(e) => setFiltroStatus(e.target.value)}
-        >
-          <option value="todos">Todos os status</option>
-          <option value="Ativa">Ativa</option>
-          <option value="Finalizada">Finalizada</option>
-          <option value="Cancelada">Cancelada</option>
-        </select>
-
-      </div>
+      <FiltrosOcorrencias
+        busca={busca}
+        placeholderBusca="Buscar por colaborador, status ou motivo"
+        dataInicio={dataInicio}
+        dataFim={dataFim}
+        hoje={hoje}
+        onBuscaChange={atualizarFiltro(setBusca)}
+        onDataInicioChange={atualizarFiltro(setDataInicio)}
+        onDataFimChange={atualizarFiltro(setDataFim)}
+        filtrosExtras={[
+          {
+            id: "status",
+            value: filtroStatus,
+            onChange: atualizarFiltro(setFiltroStatus),
+            options: [
+              { value: "todos", label: "Todos os status" },
+              { value: "Ativa", label: "Ativa" },
+              { value: "Finalizada", label: "Finalizada" },
+              { value: "Cancelada", label: "Cancelada" },
+            ],
+          },
+        ]}
+      />
 
       <div className="mt-10 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-x-auto">
         <table className="w-full">
           <thead className="bg-zinc-800">
             <tr>
               <th className="text-left p-4">Colaborador</th>
-              <th className="text-left p-4">Inicio</th>
+              <th className="text-left p-4">Início</th>
               <th className="text-left p-4">Dias</th>
+              <th className="text-left p-4">Documento</th>
               <th className="text-left p-4">Motivo</th>
               <th className="text-left p-4">Status</th>
-              {podeGerenciar && <th className="text-left p-4">Acoes</th>}
+              {podeGerenciar && <th className="text-left p-4">Ações</th>}
             </tr>
           </thead>
 
           <tbody>
             {carregando && (
               <tr className="border-t border-zinc-800">
-                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 6 : 5}>
-                  Carregando suspensoes...
+                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 7 : 6}>
+                  Carregando suspensões...
                 </td>
               </tr>
             )}
 
-            {!carregando && suspensoesFiltradas.length === 0 && (
+            {!carregando && suspensoes.length === 0 && (
               <tr className="border-t border-zinc-800">
-                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 6 : 5}>
-                  Nenhuma suspensao registrada.
+                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 7 : 6}>
+                  Nenhuma suspensão registrada.
                 </td>
               </tr>
             )}
 
-            {!carregando && suspensoesFiltradas.map((suspensao) => (
+            {!carregando && suspensoes.map((suspensao) => (
               <tr key={suspensao.id} className="border-t border-zinc-800">
                 <td className="p-4">
-                  {buscarNomeColaborador(suspensao.colaborador_id)}
+                  {buscarNomeColaborador(suspensao)}
+                  <AuditInfo registro={suspensao} compacto />
                 </td>
 
                 <td className="p-4">{formatarData(suspensao.data_inicio)}</td>
                 <td className="p-4">{suspensao.dias} dia(s)</td>
+                <td className="p-4">
+                  {labelModeloRegistro(modelosSuspensao, suspensao.detalhes)}
+                </td>
                 <td className="p-4">{suspensao.motivo}</td>
 
                 <td className="p-4">
@@ -374,8 +361,25 @@ export default function Suspensoes() {
                           menuAberto === suspensao.id ? null : suspensao.id
                         )
                       }
-                      onEditar={() => editarSuspensao(suspensao)}
-                      onExcluir={() => excluirSuspensao(suspensao)}
+                      actions={[
+                        {
+                          label: "Editar",
+                          onClick: () => editarSuspensao(suspensao),
+                        },
+                        {
+                          label: "Extrair PDF",
+                          onClick: () =>
+                            extrairPdfDisciplinar(
+                              "suspensao",
+                              suspensao,
+                              colaboradores
+                            ),
+                        },
+                        {
+                          label: "Excluir",
+                          onClick: () => excluirSuspensao(suspensao),
+                        },
+                      ]}
                     />
                   </td>
                 )}
@@ -385,10 +389,18 @@ export default function Suspensoes() {
         </table>
       </div>
 
+      <Paginacao
+        total={total}
+        pagina={pagina}
+        limitePorPagina={limitePorPagina}
+        onPaginaChange={setPagina}
+        textoTotal={`${total} suspensão(ões) encontrada(s)`}
+      />
+
       <ConfirmDialog
         aberto={Boolean(suspensaoParaExcluir)}
-        titulo="Excluir suspensao"
-        mensagem="Esta acao remove a suspensao definitivamente."
+        titulo="Excluir suspensão"
+        mensagem="Esta ação remove a suspensão do histórico."
         onCancelar={() => setSuspensaoParaExcluir(null)}
         onConfirmar={confirmarExclusao}
       />

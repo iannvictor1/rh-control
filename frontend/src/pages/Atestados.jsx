@@ -1,10 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import ActionMenu from "../components/ActionMenu";
+import AuditInfo from "../components/AuditInfo";
 import ConfirmDialog from "../components/ConfirmDialog";
+import FiltrosOcorrencias from "../components/FiltrosOcorrencias";
+import FormOcorrencia from "../components/FormOcorrencia";
+import Paginacao from "../components/Paginacao";
+import useBuscaPaginada from "../hooks/useBuscaPaginada";
 import api from "../services/api";
 import { canManageRh } from "../services/utils/auth";
-import { dataDentroPeriodo, formatarData } from "../services/utils/formatters";
+import { getApiErrorMessage } from "../services/utils/errors";
+import { formatarData } from "../services/utils/formatters";
 
 const formInicial = {
   colaborador_id: "",
@@ -15,47 +21,53 @@ const formInicial = {
 };
 
 export default function Atestados() {
-  const [atestados, setAtestados] = useState([]);
   const [colaboradores, setColaboradores] = useState([]);
   const [form, setForm] = useState(formInicial);
   const [editando, setEditando] = useState(null);
   const [menuAberto, setMenuAberto] = useState(null);
-  const [carregando, setCarregando] = useState(true);
   const [atestadoParaExcluir, setAtestadoParaExcluir] = useState(null);
+  const [anexo, setAnexo] = useState(null);
   const [busca, setBusca] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const podeGerenciar = canManageRh();
+  const hoje = new Date().toISOString().slice(0, 10);
 
-  async function carregarDados() {
-    const [resAtestados, resColaboradores] = await Promise.all([
-      api.get("/atestados/"),
-      api.get("/colaboradores/"),
-    ]);
+  const filtros = useMemo(() => ({
+    q: busca,
+    data_inicio: dataInicio,
+    data_fim: dataFim,
+  }), [busca, dataInicio, dataFim]);
 
-    setAtestados(resAtestados.data);
-    setColaboradores(resColaboradores.data);
-  }
+  const {
+    items: atestados,
+    total,
+    pagina,
+    setPagina,
+    carregando,
+    limitePorPagina,
+    carregar: carregarAtestados,
+    atualizarFiltro,
+  } = useBuscaPaginada({
+    endpoint: "/atestados/busca",
+    filtros,
+    mensagemErro: "Erro ao carregar atestados.",
+  });
 
   useEffect(() => {
-    async function carregarDadosIniciais() {
+    async function carregarColaboradores() {
       try {
-        const [resAtestados, resColaboradores] = await Promise.all([
-          api.get("/atestados/"),
-          api.get("/colaboradores/"),
-        ]);
-
-        setAtestados(resAtestados.data);
-        setColaboradores(resColaboradores.data);
+        const response = await api.get("/colaboradores/opcoes", {
+          params: { ativo: true },
+        });
+        setColaboradores(response.data);
       } catch (error) {
-        toast.error("Erro ao carregar atestados.");
+        toast.error("Erro ao carregar colaboradores.");
         console.error(error);
-      } finally {
-        setCarregando(false);
       }
     }
 
-    carregarDadosIniciais();
+    carregarColaboradores();
   }, []);
 
   function atualizarCampo(e) {
@@ -65,9 +77,8 @@ export default function Atestados() {
     });
   }
 
-  function buscarNomeColaborador(id) {
-    const colaborador = colaboradores.find((c) => c.id === id);
-    return colaborador ? colaborador.nome : "Colaborador nao encontrado";
+  function buscarNomeColaborador(registro) {
+    return registro.colaborador?.nome || "Colaborador não encontrado";
   }
 
   function editarAtestado(atestado) {
@@ -85,6 +96,18 @@ export default function Atestados() {
   function cancelarEdicao() {
     setEditando(null);
     setForm(formInicial);
+    setAnexo(null);
+  }
+
+  async function enviarAnexo(atestadoId) {
+    if (!anexo) return;
+
+    const formData = new FormData();
+    formData.append("arquivo", anexo);
+
+    await api.post(`/atestados/${atestadoId}/anexos`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
   }
 
   async function salvarAtestado(e) {
@@ -99,23 +122,44 @@ export default function Atestados() {
     };
 
     try {
+      let response;
+
       if (editando) {
-        await api.put(`/atestados/${editando.id}`, dados);
-        toast.success("Atestado medico atualizado!");
+        response = await api.put(`/atestados/${editando.id}`, dados);
       } else {
-        await api.post("/atestados/", dados);
-        toast.success("Atestado medico registrado!");
+        response = await api.post("/atestado/", dados);
+      }
+
+      if (anexo) {
+        try {
+          await enviarAnexo(response.data.id);
+
+          toast.success(
+            editando
+              ? "Atestado médico atualizado!"
+              : "Atestado médico registrado!"
+          );
+        } catch (error) {
+          toast.error("Atestado salvo, mas houve erro ao enviar o anexo.");
+          console.error(error);
+        }
+      } else {
+        toast.success(
+          editando
+            ? "Atestado médico atualizado!"
+            : "Atestado médico registrado!"
+        );
       }
 
       cancelarEdicao();
-      carregarDados();
+      carregarAtestados();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao salvar atestado.");
+      toast.error(getApiErrorMessage(error, "Erro ao salvar atestado."));
       console.error(error);
     }
   }
 
-  async function excluirAtestado(atestado) {
+  function excluirAtestado(atestado) {
     setMenuAberto(null);
     setAtestadoParaExcluir(atestado);
   }
@@ -125,164 +169,119 @@ export default function Atestados() {
 
     try {
       await api.delete(`/atestados/${atestadoParaExcluir.id}`);
-      toast.success("Atestado medico excluido!");
+      toast.success("Atestado médico excluído!");
 
       if (editando?.id === atestadoParaExcluir.id) {
         cancelarEdicao();
       }
 
       setAtestadoParaExcluir(null);
-      carregarDados();
+      carregarAtestados();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao excluir atestado.");
+      toast.error(getApiErrorMessage(error, "Erro ao excluir atestado."));
       console.error(error);
     }
   }
 
-  const atestadosFiltrados = atestados.filter((atestado) => {
-    const textoBusca = busca.toLowerCase();
-    const nome = buscarNomeColaborador(atestado.colaborador_id).toLowerCase();
-    const cid = (atestado.cid || "").toLowerCase();
-    const observacao = (atestado.observacao || "").toLowerCase();
+  async function baixarAnexo(anexoAtestado) {
+    try {
+      const response = await api.get(
+        `/atestados/anexos/${anexoAtestado.id}/download`,
+        { responseType: "blob" }
+      );
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = anexoAtestado.nome_original;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao baixar anexo."));
+      console.error(error);
+    }
+  }
 
-    return (
-      (nome.includes(textoBusca) ||
-        cid.includes(textoBusca) ||
-        observacao.includes(textoBusca)) &&
-      dataDentroPeriodo(atestado.data_atestado, dataInicio, dataFim)
-    );
-  });
+  async function excluirAnexo(anexoAtestado) {
+    try {
+      await api.delete(`/atestados/anexos/${anexoAtestado.id}`);
+      toast.success("Anexo removido!");
+      carregarAtestados();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao remover anexo."));
+      console.error(error);
+    }
+  }
 
   return (
     <>
-      <h2 className="text-4xl font-bold">Atestados medicos</h2>
+      <h2 className="text-4xl font-bold">Atestados médicos</h2>
 
       {podeGerenciar && (
-        <form
+        <>
+        <FormOcorrencia
+          form={form}
+          editando={editando}
+          colaboradores={colaboradores}
+          hoje={hoje}
+          onChange={atualizarCampo}
           onSubmit={salvarAtestado}
-          className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 grid grid-cols-5 gap-4"
-        >
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">
-            Colaborador
-          </label>
-
-          <select
-            className="input w-full"
-            name="colaborador_id"
-            value={form.colaborador_id}
-            onChange={atualizarCampo}
-            required
-          >
-            <option value="">Selecione</option>
-
-            {colaboradores
-              .filter((colaborador) => colaborador.ativo)
-              .map((colaborador) => (
-                <option key={colaborador.id} value={colaborador.id}>
-                  {colaborador.nome}
-                </option>
-              ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">Data</label>
-
-          <input
-            className="input w-full"
-            type="date"
-            name="data_atestado"
-            value={form.data_atestado}
-            onChange={atualizarCampo}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">CID</label>
-
-          <input
-            className="input w-full"
-            name="cid"
-            placeholder="Opcional"
-            value={form.cid}
-            onChange={atualizarCampo}
-          />
-        </div>
-
-        <div>
-          <label className="text-sm text-zinc-400 mb-1 block">Dias</label>
-
-          <input
-            className="input w-full"
-            type="number"
-            min="1"
-            name="dias"
-            value={form.dias}
-            onChange={atualizarCampo}
-            required
-          />
-        </div>
-
-        <div className="flex items-end gap-2">
-          <button
-            type="submit"
-            className="flex-1 bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl font-semibold transition"
-          >
-            {editando ? "Atualizar" : "Registrar"}
-          </button>
-
-          {editando && (
-            <button
-              type="button"
-              onClick={cancelarEdicao}
-              className="px-5 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700"
-            >
-              Cancelar
-            </button>
-          )}
-        </div>
-
-        <div className="col-span-5">
-          <label className="text-sm text-zinc-400 mb-1 block">
-            Observacao
-          </label>
-
-          <input
-            className="input w-full"
-            name="observacao"
-            placeholder="Opcional"
-            value={form.observacao}
-            onChange={atualizarCampo}
-          />
-        </div>
-        </form>
+          onCancel={cancelarEdicao}
+          extraContent={
+            <div className="md:col-span-5">
+              <label className="text-sm text-zinc-400 mb-2 block">
+                Anexo do atestado
+              </label>
+              <input
+                className="input w-full"
+                type="file"
+                accept=".pdf,image/png,image/jpeg,image/webp"
+                onChange={(e) => setAnexo(e.target.files?.[0] || null)}
+              />
+              <p className="mt-2 text-sm text-zinc-500">
+                PDF ou imagem, até 10 MB.
+              </p>
+            </div>
+          }
+          campos={[
+            {
+              name: "data_atestado",
+              label: "Data",
+              type: "date",
+              required: true,
+            },
+            {
+              name: "cid",
+              label: "CID",
+              placeholder: "Opcional",
+            },
+            {
+              name: "dias",
+              label: "Dias",
+              type: "number",
+              min: "1",
+              required: true,
+            },
+            {
+              name: "observacao",
+              label: "Observação",
+              placeholder: "Opcional",
+              className: "md:col-span-5",
+            },
+          ]}
+        />
+        </>
       )}
 
-      <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input
-          className="input w-full"
-          placeholder="Buscar por colaborador, CID ou observacao"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
-
-        <input
-          className="input w-full"
-          type="date"
-          value={dataInicio}
-          onChange={(e) => setDataInicio(e.target.value)}
-        />
-
-        <input
-          className="input w-full"
-          type="date"
-          value={dataFim}
-          onChange={(e) => setDataFim(e.target.value)}
-        />
-
-      </div>
+      <FiltrosOcorrencias
+        busca={busca}
+        placeholderBusca="Buscar por colaborador, CID ou observação"
+        dataInicio={dataInicio}
+        dataFim={dataFim}
+        hoje={hoje}
+        onBuscaChange={atualizarFiltro(setBusca)}
+        onDataInicioChange={atualizarFiltro(setDataInicio)}
+        onDataFimChange={atualizarFiltro(setDataFim)}
+      />
 
       <div className="mt-10 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-x-auto">
         <table className="w-full">
@@ -292,32 +291,34 @@ export default function Atestados() {
               <th className="text-left p-4">Data</th>
               <th className="text-left p-4">CID</th>
               <th className="text-left p-4">Dias</th>
-              <th className="text-left p-4">Observacao</th>
-              {podeGerenciar && <th className="text-left p-4">Acoes</th>}
+              <th className="text-left p-4">Observação</th>
+              <th className="text-left p-4">Anexos</th>
+              {podeGerenciar && <th className="text-left p-4">Ações</th>}
             </tr>
           </thead>
 
           <tbody>
             {carregando && (
               <tr className="border-t border-zinc-800">
-                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 6 : 5}>
+                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 7 : 6}>
                   Carregando atestados...
                 </td>
               </tr>
             )}
 
-            {!carregando && atestadosFiltrados.length === 0 && (
+            {!carregando && atestados.length === 0 && (
               <tr className="border-t border-zinc-800">
-                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 6 : 5}>
+                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 7 : 6}>
                   Nenhum atestado registrado.
                 </td>
               </tr>
             )}
 
-            {!carregando && atestadosFiltrados.map((atestado) => (
+            {!carregando && atestados.map((atestado) => (
               <tr key={atestado.id} className="border-t border-zinc-800">
                 <td className="p-4">
-                  {buscarNomeColaborador(atestado.colaborador_id)}
+                  {buscarNomeColaborador(atestado)}
+                  <AuditInfo registro={atestado} compacto />
                 </td>
 
                 <td className="p-4">{formatarData(atestado.data_atestado)}</td>
@@ -325,7 +326,37 @@ export default function Atestados() {
                 <td className="p-4">{atestado.dias} dia(s)</td>
 
                 <td className="p-4">
-                  {atestado.observacao || "Sem observacao"}
+                  {atestado.observacao || "Sem observação"}
+                </td>
+
+                <td className="p-4">
+                  {atestado.anexos?.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {atestado.anexos.map((item) => (
+                        <div key={item.id} className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            className="text-blue-400 hover:text-blue-300 text-left"
+                            onClick={() => baixarAnexo(item)}
+                          >
+                            {item.nome_original}
+                          </button>
+
+                          {podeGerenciar && (
+                            <button
+                              type="button"
+                              className="text-red-400 hover:text-red-300 text-sm"
+                              onClick={() => excluirAnexo(item)}
+                            >
+                              Remover
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-zinc-500">Sem anexo</span>
+                  )}
                 </td>
 
                 {podeGerenciar && (
@@ -349,10 +380,18 @@ export default function Atestados() {
         </table>
       </div>
 
+      <Paginacao
+        total={total}
+        pagina={pagina}
+        limitePorPagina={limitePorPagina}
+        onPaginaChange={setPagina}
+        textoTotal={`${total} atestado(s) encontrado(s)`}
+      />
+
       <ConfirmDialog
         aberto={Boolean(atestadoParaExcluir)}
         titulo="Excluir atestado"
-        mensagem="Esta acao remove o atestado medico definitivamente."
+        mensagem="Esta ação remove o atestado médico do histórico."
         onCancelar={() => setAtestadoParaExcluir(null)}
         onConfirmar={confirmarExclusao}
       />

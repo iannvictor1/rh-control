@@ -1,6 +1,15 @@
 from datetime import date
 
-from app.schemas import ColaboradorResponse
+import pytest
+from pydantic import ValidationError
+
+from app.schemas import (
+    AtestadoMedicoCreate,
+    ColaboradorCreate,
+    ColaboradorResponse,
+    FaltaCreate,
+    SuspensaoUpdate,
+)
 
 
 def test_vencimento_aso_um_ano_depois():
@@ -23,3 +32,35 @@ def test_vencimento_aso_ajusta_ano_bissexto():
     )
 
     assert colaborador.vencimento_aso == date(2025, 2, 28)
+
+
+def test_colaborador_valida_email():
+    with pytest.raises(ValidationError):
+        ColaboradorCreate(nome="Ana", email="email-invalido")
+
+
+def test_colaborador_valida_cpf_com_11_digitos():
+    with pytest.raises(ValidationError):
+        ColaboradorCreate(nome="Ana", cpf="123")
+
+
+def test_atestado_exige_dias_positivos():
+    with pytest.raises(ValidationError):
+        AtestadoMedicoCreate(
+            colaborador_id=1,
+            data_atestado=date(2026, 5, 20),
+            dias=0,
+        )
+
+
+def test_ocorrencia_nao_aceita_data_futura():
+    with pytest.raises(ValidationError):
+        FaltaCreate(
+            colaborador_id=1,
+            data_falta=date(2999, 1, 1),
+        )
+
+
+def test_suspensao_valida_status():
+    with pytest.raises(ValidationError):
+        SuspensaoUpdate(status="Pendente")

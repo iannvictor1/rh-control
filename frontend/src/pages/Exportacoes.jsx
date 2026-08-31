@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { exportarCsv } from "../services/utils/exportCsv";
-import { dataDentroPeriodo, formatarData } from "../services/utils/formatters";
+import { exportarXlsx } from "../services/utils/exportXlsx";
+import { dataDentroPeriodo, formatarData, formatarMoeda } from "../services/utils/formatters";
 
 const relatorios = {
   colaboradores: {
@@ -11,19 +12,24 @@ const relatorios = {
     endpoint: "/colaboradores/",
     dataCampo: "data_admissao",
     colunas: [
+      { id: "empresa", label: "Empresa", valor: (item) => item.empresa || "-" },
       { id: "nome", label: "Nome", valor: "nome" },
-      { id: "matricula", label: "Matricula", valor: (item) => item.matricula || "-" },
+      { id: "matricula", label: "Matrícula", valor: (item) => item.matricula || "-" },
       { id: "cargo", label: "Cargo", valor: (item) => item.cargo || "-" },
+      { id: "salario", label: "Salário", valor: (item) => formatarMoeda(item.salario) },
+      { id: "tipo_bonificacao", label: "Tipo bonificação", valor: (item) => item.tipo_bonificacao || "-" },
+      { id: "bonificacao", label: "Bonificação", valor: (item) => formatarMoeda(item.bonificacao) },
       { id: "setor", label: "Setor", valor: (item) => item.setor || "-" },
       { id: "tipo_contrato", label: "Contrato", valor: (item) => item.tipo_contrato || "-" },
       { id: "cpf", label: "CPF", valor: (item) => item.cpf || "-" },
       { id: "rg", label: "RG", valor: (item) => item.rg || "-" },
       { id: "email", label: "E-mail", valor: (item) => item.email || "-" },
       { id: "telefone", label: "Telefone", valor: (item) => item.telefone || "-" },
-      { id: "admissao", label: "Admissao", valor: (item) => formatarData(item.data_admissao) },
+      { id: "admissao", label: "Admissão", valor: (item) => formatarData(item.data_admissao) },
       { id: "desligamento", label: "Desligamento", valor: (item) => formatarData(item.data_desligamento) },
+      { id: "motivo_desligamento", label: "Motivo desligamento", valor: (item) => item.motivo_desligamento || "-" },
       { id: "aso", label: "ASO", valor: (item) => formatarData(item.data_aso) },
-      { id: "observacoes", label: "Observacoes", valor: (item) => item.observacoes || "-" },
+      { id: "observacoes", label: "Observações", valor: (item) => item.observacoes || "-" },
       { id: "status", label: "Status", valor: (item) => item.ativo ? "Ativo" : "Inativo" },
     ],
   },
@@ -38,6 +44,17 @@ const relatorios = {
       { id: "motivo", label: "Motivo", valor: (item) => item.motivo || "Sem motivo informado" },
     ],
   },
+  aso: {
+    titulo: "ASO",
+    arquivo: "relatorio_aso.csv",
+    endpoint: "/colaboradores/",
+    dataCampo: "data_aso",
+    colunas: [
+      { id: "nome", label: "Nome", valor: "nome" },
+      { id: "data_aso", label: "Data de início do ASO", valor: (item) => formatarData(item.data_aso) },
+      { id: "vencimento_aso", label: "Data final do ASO", valor: (item) => formatarData(item.vencimento_aso) },
+    ],
+  },
   atestados: {
     titulo: "Atestados",
     arquivo: "atestados.csv",
@@ -48,11 +65,11 @@ const relatorios = {
       { id: "data", label: "Data", valor: (item) => formatarData(item.data_atestado) },
       { id: "cid", label: "CID", valor: (item) => item.cid || "-" },
       { id: "dias", label: "Dias", valor: "dias" },
-      { id: "observacao", label: "Observacao", valor: (item) => item.observacao || "-" },
+      { id: "observacao", label: "Observação", valor: (item) => item.observacao || "-" },
     ],
   },
   advertencias: {
-    titulo: "Advertencias",
+    titulo: "Advertências",
     arquivo: "advertencias.csv",
     endpoint: "/advertencias/",
     dataCampo: "data_advertencia",
@@ -64,20 +81,20 @@ const relatorios = {
     ],
   },
   suspensoes: {
-    titulo: "Suspensoes",
+    titulo: "Suspensões",
     arquivo: "suspensoes.csv",
     endpoint: "/suspensoes/",
     dataCampo: "data_inicio",
     colunas: [
       { id: "colaborador", label: "Colaborador", valor: (item, nomes) => nomes[item.colaborador_id] || "-" },
-      { id: "inicio", label: "Inicio", valor: (item) => formatarData(item.data_inicio) },
+      { id: "inicio", label: "Início", valor: (item) => formatarData(item.data_inicio) },
       { id: "dias", label: "Dias", valor: "dias" },
       { id: "motivo", label: "Motivo", valor: "motivo" },
       { id: "status", label: "Status", valor: "status" },
     ],
   },
   usuarios: {
-    titulo: "Usuarios",
+    titulo: "Usuários",
     arquivo: "usuarios.csv",
     endpoint: "/usuarios/",
     colunas: [
@@ -126,7 +143,7 @@ export default function Exportacoes() {
         setDados(resDados.data);
         setColaboradores(resColaboradores?.data || resDados.data);
       } catch (error) {
-        toast.error("Erro ao carregar dados para exportacao.");
+        toast.error("Erro ao carregar dados para exportação.");
         console.error(error);
       } finally {
         setCarregando(false);
@@ -166,7 +183,7 @@ export default function Exportacoes() {
     );
   }
 
-  function exportarRelatorio() {
+  function montarColunasExportacao() {
     const colunas = config.colunas
       .filter((coluna) => colunasSelecionadas.includes(coluna.id))
       .map((coluna) => ({
@@ -178,30 +195,56 @@ export default function Exportacoes() {
 
     if (colunas.length === 0) {
       toast.error("Selecione pelo menos uma coluna.");
-      return;
+      return [];
     }
 
+    return colunas;
+  }
+
+  function exportarRelatorioCsv() {
+    const colunas = montarColunasExportacao();
+
+    if (colunas.length === 0) return;
+
     exportarCsv(config.arquivo, colunas, dadosFiltrados);
+  }
+
+  function exportarRelatorioXlsx() {
+    const colunas = montarColunasExportacao();
+
+    if (colunas.length === 0) return;
+
+    exportarXlsx(config.arquivo, colunas, dadosFiltrados);
   }
 
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h2 className="text-3xl md:text-4xl font-bold">Exportacoes</h2>
+        <h2 className="text-3xl md:text-4xl font-bold">Exportações</h2>
 
-        <button
-          type="button"
-          onClick={exportarRelatorio}
-          className="bg-green-600 hover:bg-green-700 px-5 py-3 rounded-xl font-semibold transition"
-        >
-          Exportar CSV
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={exportarRelatorioCsv}
+            className="bg-green-600 hover:bg-green-700 px-5 py-3 rounded-xl font-semibold transition"
+          >
+            Exportar CSV
+          </button>
+
+          <button
+            type="button"
+            onClick={exportarRelatorioXlsx}
+            className="bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl font-semibold transition"
+          >
+            Exportar XLSX
+          </button>
+        </div>
       </div>
 
       <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label className="text-sm text-zinc-400 mb-1 block">
-            Relatorio
+            Relatório
           </label>
 
           <select
@@ -222,7 +265,7 @@ export default function Exportacoes() {
 
           <input
             className="input w-full"
-            placeholder="Filtrar conteudo"
+            placeholder="Filtrar conteúdo"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
@@ -288,7 +331,7 @@ export default function Exportacoes() {
           <p className="text-zinc-400">Carregando dados...</p>
         ) : (
           <p className="text-zinc-400">
-            O arquivo sera gerado com as colunas marcadas e os filtros aplicados.
+            O arquivo será gerado com as colunas marcadas e os filtros aplicados.
           </p>
         )}
       </div>

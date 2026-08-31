@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Link, useParams } from "react-router-dom";
 import ActionMenu from "../components/ActionMenu";
+import AuditInfo from "../components/AuditInfo";
 import ConfirmDialog from "../components/ConfirmDialog";
 import api from "../services/api";
 import { canManageRh } from "../services/utils/auth";
-import { formatarData } from "../services/utils/formatters";
+import { formatarData, formatarMoeda } from "../services/utils/formatters";
 
 const endpointsPorTipo = {
   falta: "/faltas",
@@ -26,7 +27,7 @@ function calcularVencimentoAso(dataAso) {
 function calcularStatusAso(dataAso, vencimentoAso) {
   if (!dataAso || !vencimentoAso) {
     return {
-      texto: "ASO nao informado",
+      texto: "ASO não informado",
       classe: "bg-zinc-700/60 text-zinc-300",
       detalhe: "-",
     };
@@ -66,7 +67,7 @@ function CampoFicha({ label, value }) {
     <div>
       <p className="text-sm text-zinc-500">{label}</p>
       <p className="mt-1 text-base text-white break-words">
-        {value || "Nao informado"}
+        {value || "Não informado"}
       </p>
     </div>
   );
@@ -79,6 +80,198 @@ function ResumoCard({ titulo, valor, detalhe, classe = "text-white" }) {
       <p className={`mt-3 text-3xl font-black ${classe}`}>{valor}</p>
       {detalhe && <p className="mt-2 text-sm text-zinc-400">{detalhe}</p>}
     </div>
+  );
+}
+
+function CabecalhoColaborador({ colaborador, statusAso }) {
+  return (
+    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+      <div>
+        <Link
+          to="/colaboradores"
+          className="text-sm text-blue-400 hover:text-blue-300"
+        >
+          Voltar para colaboradores
+        </Link>
+
+        <h1 className="mt-3 text-4xl font-black">{colaborador.nome}</h1>
+
+        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+          <span className="px-3 py-1 rounded-full bg-zinc-800 text-zinc-300">
+            Matrícula: {colaborador.matricula || "-"}
+          </span>
+          <span className="px-3 py-1 rounded-full bg-zinc-800 text-zinc-300">
+            {colaborador.cargo || "Cargo não informado"}
+          </span>
+          <span className="px-3 py-1 rounded-full bg-zinc-800 text-zinc-300">
+            {colaborador.setor || "Setor não informado"}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <span
+          className={`px-4 py-2 rounded-full text-sm font-semibold ${
+            colaborador.ativo
+              ? "bg-green-500/20 text-green-400"
+              : "bg-red-500/20 text-red-400"
+          }`}
+        >
+          {colaborador.ativo ? "Ativo" : "Inativo"}
+        </span>
+
+        <span className={`px-4 py-2 rounded-full text-sm font-semibold ${statusAso.classe}`}>
+          ASO {statusAso.texto}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ResumoColaborador({
+  faltas,
+  atestados,
+  advertencias,
+  suspensoes,
+  vencimentoAso,
+  statusAso,
+}) {
+  return (
+    <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+      <ResumoCard titulo="Faltas" valor={faltas.length} />
+      <ResumoCard titulo="Atestados" valor={atestados.length} />
+      <ResumoCard titulo="Advertências" valor={advertencias.length} />
+      <ResumoCard titulo="Suspensões" valor={suspensoes.length} />
+      <ResumoCard
+        titulo="Vencimento ASO"
+        valor={formatarData(vencimentoAso)}
+        detalhe={statusAso.detalhe}
+        classe={statusAso.texto === "Vencido" ? "text-red-400" : "text-white"}
+      />
+    </div>
+  );
+}
+
+function FichaCadastral({ colaborador, vencimentoAso }) {
+  return (
+    <section className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+      <h2 className="text-2xl font-bold mb-6">Ficha cadastral</h2>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+        <CampoFicha label="Empresa" value={colaborador.empresa} />
+        <CampoFicha label="Contrato" value={colaborador.tipo_contrato} />
+        <CampoFicha label="Salário" value={formatarMoeda(colaborador.salario)} />
+        <CampoFicha label="Tipo bonificação" value={colaborador.tipo_bonificacao} />
+        <CampoFicha label="Bonificação" value={formatarMoeda(colaborador.bonificacao)} />
+        <CampoFicha label="Data de nascimento" value={formatarData(colaborador.data_nascimento)} />
+        <CampoFicha label="RG" value={colaborador.rg} />
+        <CampoFicha label="CPF" value={colaborador.cpf} />
+        <CampoFicha label="Admissão" value={formatarData(colaborador.data_admissao)} />
+        <CampoFicha label="Desligamento" value={formatarData(colaborador.data_desligamento)} />
+        <CampoFicha label="Motivo do desligamento" value={colaborador.motivo_desligamento} />
+        <CampoFicha label="E-mail" value={colaborador.email} />
+        <CampoFicha label="Telefone" value={colaborador.telefone} />
+        <CampoFicha label="Telefone emergência" value={colaborador.telefone_emergencia} />
+        <CampoFicha label="Endereço" value={colaborador.endereco} />
+        <CampoFicha label="Data do ASO" value={formatarData(colaborador.data_aso)} />
+        <CampoFicha label="Vencimento do ASO" value={formatarData(vencimentoAso)} />
+        <div className="sm:col-span-2 xl:col-span-4">
+          <CampoFicha label="Observações" value={colaborador.observacoes} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HistoricoOcorrencias({
+  eventosFiltrados,
+  busca,
+  setBusca,
+  filtroTipo,
+  setFiltroTipo,
+  podeGerenciar,
+  menuAberto,
+  setMenuAberto,
+  abrirEdicaoEvento,
+  setEventoParaExcluir,
+}) {
+  return (
+    <section className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <h2 className="text-2xl font-bold">Histórico de ocorrências</h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
+          <input
+            className="input w-full lg:w-80"
+            placeholder="Buscar no histórico"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+
+          <select
+            className="input w-full lg:w-56"
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value)}
+          >
+            <option value="todos">Todos os tipos</option>
+            <option value="faltas">Faltas</option>
+            <option value="atestados">Atestados</option>
+            <option value="advertencias">Advertências</option>
+            <option value="suspensoes">Suspensões</option>
+          </select>
+        </div>
+      </div>
+
+      {eventosFiltrados.length === 0 ? (
+        <p className="mt-6 text-zinc-500">Nenhuma ocorrência encontrada.</p>
+      ) : (
+        <div className="mt-6 relative">
+          <div className="absolute left-4 top-0 bottom-0 w-px bg-zinc-800" />
+
+          <div className="space-y-4">
+            {eventosFiltrados.map((evento) => (
+              <div key={evento.id} className="relative pl-10">
+                <div className="absolute left-[0.55rem] top-6 w-3 h-3 rounded-full bg-blue-500 ring-4 ring-zinc-900" />
+
+                <div className="border border-zinc-800 rounded-xl p-4 bg-zinc-950/50 flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className={`px-3 py-1 rounded-full text-sm ${evento.cor}`}>
+                        {evento.tipo}
+                      </span>
+
+                      <strong>{evento.titulo}</strong>
+
+                      <span className="text-sm text-zinc-500">
+                        {formatarData(evento.data)}
+                      </span>
+                    </div>
+
+                    <p className="text-zinc-400 mt-2 break-words">
+                      {evento.descricao}
+                    </p>
+
+                    <AuditInfo registro={evento.original} />
+                  </div>
+
+                  {podeGerenciar && (
+                    <ActionMenu
+                      aberto={menuAberto === evento.id}
+                      onClose={() => setMenuAberto(null)}
+                      onToggle={() =>
+                        setMenuAberto(menuAberto === evento.id ? null : evento.id)
+                      }
+                      onEditar={() => abrirEdicaoEvento(evento)}
+                      onExcluir={() => setEventoParaExcluir(evento)}
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -128,7 +321,7 @@ export default function DetalheColaborador() {
   }
 
   if (!dados) {
-    return <div className="text-zinc-400">Colaborador nao encontrado.</div>;
+    return <div className="text-zinc-400">Colaborador não encontrado.</div>;
   }
 
   const {
@@ -176,7 +369,7 @@ export default function DetalheColaborador() {
       endpointTipo: "advertencia",
       original: advertencia,
       data: advertencia.data_advertencia,
-      tipo: "Advertencia",
+      tipo: "Advertência",
       filtro: "advertencias",
       titulo: advertencia.tipo,
       descricao: advertencia.motivo,
@@ -188,7 +381,7 @@ export default function DetalheColaborador() {
       endpointTipo: "suspensao",
       original: suspensao,
       data: suspensao.data_inicio,
-      tipo: "Suspensao",
+      tipo: "Suspensão",
       filtro: "suspensoes",
       titulo: `${suspensao.dias} dia(s)`,
       descricao: `${suspensao.motivo} - ${suspensao.status}`,
@@ -213,12 +406,12 @@ export default function DetalheColaborador() {
     try {
       const endpoint = endpointsPorTipo[eventoParaExcluir.endpointTipo];
       await api.delete(`${endpoint}/${eventoParaExcluir.itemId}`);
-      toast.success("Ocorrencia excluida com sucesso!");
+      toast.success("Ocorrência excluída com sucesso!");
       setEventoParaExcluir(null);
       setMenuAberto(null);
       carregarDados();
     } catch (error) {
-      toast.error("Erro ao excluir ocorrencia.");
+      toast.error("Erro ao excluir ocorrência.");
       console.error(error);
     }
   }
@@ -293,12 +486,12 @@ export default function DetalheColaborador() {
 
     try {
       await api.put(`${endpoint}/${eventoEditando.itemId}`, dados);
-      toast.success("Ocorrencia atualizada com sucesso!");
+      toast.success("Ocorrência atualizada com sucesso!");
       setEventoEditando(null);
       setFormEdicao({});
       carregarDados();
     } catch (error) {
-      toast.error("Erro ao atualizar ocorrencia.");
+      toast.error("Erro ao atualizar ocorrência.");
       console.error(error);
     }
   }
@@ -310,161 +503,39 @@ export default function DetalheColaborador() {
 
   return (
     <>
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-        <div>
-          <Link
-            to="/colaboradores"
-            className="text-sm text-blue-400 hover:text-blue-300"
-          >
-            Voltar para colaboradores
-          </Link>
+      <CabecalhoColaborador colaborador={colaborador} statusAso={statusAso} />
 
-          <h1 className="mt-3 text-4xl font-black">{colaborador.nome}</h1>
+      <ResumoColaborador
+        faltas={faltas}
+        atestados={atestados}
+        advertencias={advertencias}
+        suspensoes={suspensoes}
+        vencimentoAso={vencimentoAso}
+        statusAso={statusAso}
+      />
 
-          <div className="mt-3 flex flex-wrap gap-2 text-sm">
-            <span className="px-3 py-1 rounded-full bg-zinc-800 text-zinc-300">
-              Matricula: {colaborador.matricula || "-"}
-            </span>
-            <span className="px-3 py-1 rounded-full bg-zinc-800 text-zinc-300">
-              {colaborador.cargo || "Cargo nao informado"}
-            </span>
-            <span className="px-3 py-1 rounded-full bg-zinc-800 text-zinc-300">
-              {colaborador.setor || "Setor nao informado"}
-            </span>
-          </div>
-        </div>
+      <FichaCadastral
+        colaborador={colaborador}
+        vencimentoAso={vencimentoAso}
+      />
 
-        <div className="flex flex-wrap gap-2">
-          <span
-            className={`px-4 py-2 rounded-full text-sm font-semibold ${
-              colaborador.ativo
-                ? "bg-green-500/20 text-green-400"
-                : "bg-red-500/20 text-red-400"
-            }`}
-          >
-            {colaborador.ativo ? "Ativo" : "Inativo"}
-          </span>
-
-          <span className={`px-4 py-2 rounded-full text-sm font-semibold ${statusAso.classe}`}>
-            ASO {statusAso.texto}
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-        <ResumoCard titulo="Faltas" valor={faltas.length} />
-        <ResumoCard titulo="Atestados" valor={atestados.length} />
-        <ResumoCard titulo="Advertencias" valor={advertencias.length} />
-        <ResumoCard titulo="Suspensoes" valor={suspensoes.length} />
-        <ResumoCard
-          titulo="Vencimento ASO"
-          valor={formatarData(vencimentoAso)}
-          detalhe={statusAso.detalhe}
-          classe={statusAso.texto === "Vencido" ? "text-red-400" : "text-white"}
-        />
-      </div>
-
-      <section className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-        <h2 className="text-2xl font-bold mb-6">Ficha cadastral</h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          <CampoFicha label="Contrato" value={colaborador.tipo_contrato} />
-          <CampoFicha label="Data de nascimento" value={formatarData(colaborador.data_nascimento)} />
-          <CampoFicha label="RG" value={colaborador.rg} />
-          <CampoFicha label="CPF" value={colaborador.cpf} />
-          <CampoFicha label="Admissao" value={formatarData(colaborador.data_admissao)} />
-          <CampoFicha label="Desligamento" value={formatarData(colaborador.data_desligamento)} />
-          <CampoFicha label="E-mail" value={colaborador.email} />
-          <CampoFicha label="Telefone" value={colaborador.telefone} />
-          <CampoFicha label="Telefone emergencia" value={colaborador.telefone_emergencia} />
-          <CampoFicha label="Endereco" value={colaborador.endereco} />
-          <CampoFicha label="Data do ASO" value={formatarData(colaborador.data_aso)} />
-          <CampoFicha label="Vencimento do ASO" value={formatarData(vencimentoAso)} />
-          <div className="sm:col-span-2 xl:col-span-4">
-            <CampoFicha label="Observacoes" value={colaborador.observacoes} />
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <h2 className="text-2xl font-bold">Historico de ocorrencias</h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
-            <input
-              className="input w-full lg:w-80"
-              placeholder="Buscar no historico"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-            />
-
-            <select
-              className="input w-full lg:w-56"
-              value={filtroTipo}
-              onChange={(e) => setFiltroTipo(e.target.value)}
-            >
-              <option value="todos">Todos os tipos</option>
-              <option value="faltas">Faltas</option>
-              <option value="atestados">Atestados</option>
-              <option value="advertencias">Advertencias</option>
-              <option value="suspensoes">Suspensoes</option>
-            </select>
-          </div>
-        </div>
-
-        {eventosFiltrados.length === 0 ? (
-          <p className="mt-6 text-zinc-500">Nenhuma ocorrencia encontrada.</p>
-        ) : (
-          <div className="mt-6 relative">
-            <div className="absolute left-4 top-0 bottom-0 w-px bg-zinc-800" />
-
-            <div className="space-y-4">
-              {eventosFiltrados.map((evento) => (
-                <div key={evento.id} className="relative pl-10">
-                  <div className="absolute left-[0.55rem] top-6 w-3 h-3 rounded-full bg-blue-500 ring-4 ring-zinc-900" />
-
-                  <div className="border border-zinc-800 rounded-xl p-4 bg-zinc-950/50 flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className={`px-3 py-1 rounded-full text-sm ${evento.cor}`}>
-                          {evento.tipo}
-                        </span>
-
-                        <strong>{evento.titulo}</strong>
-
-                        <span className="text-sm text-zinc-500">
-                          {formatarData(evento.data)}
-                        </span>
-                      </div>
-
-                      <p className="text-zinc-400 mt-2 break-words">
-                        {evento.descricao}
-                      </p>
-                    </div>
-
-                    {podeGerenciar && (
-                      <ActionMenu
-                        aberto={menuAberto === evento.id}
-                        onClose={() => setMenuAberto(null)}
-                        onToggle={() =>
-                          setMenuAberto(menuAberto === evento.id ? null : evento.id)
-                        }
-                        onEditar={() => abrirEdicaoEvento(evento)}
-                        onExcluir={() => setEventoParaExcluir(evento)}
-                      />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
+      <HistoricoOcorrencias
+        eventosFiltrados={eventosFiltrados}
+        busca={busca}
+        setBusca={setBusca}
+        filtroTipo={filtroTipo}
+        setFiltroTipo={setFiltroTipo}
+        podeGerenciar={podeGerenciar}
+        menuAberto={menuAberto}
+        setMenuAberto={setMenuAberto}
+        abrirEdicaoEvento={abrirEdicaoEvento}
+        setEventoParaExcluir={setEventoParaExcluir}
+      />
 
       <ConfirmDialog
         aberto={Boolean(eventoParaExcluir)}
-        titulo="Excluir ocorrencia"
-        mensagem="Esta acao remove o registro do historico definitivamente."
+        titulo="Excluir ocorrência"
+        mensagem="Esta ação remove o registro do histórico definitivamente."
         onCancelar={() => setEventoParaExcluir(null)}
         onConfirmar={confirmarExclusao}
       />
@@ -555,7 +626,7 @@ export default function DetalheColaborador() {
 
                   <div>
                     <label className="text-sm text-zinc-400 mb-1 block">
-                      Observacao
+                      Observação
                     </label>
                     <input
                       className="input w-full"
@@ -617,7 +688,7 @@ export default function DetalheColaborador() {
                 <>
                   <div>
                     <label className="text-sm text-zinc-400 mb-1 block">
-                      Inicio
+                      Início
                     </label>
                     <input
                       className="input w-full"

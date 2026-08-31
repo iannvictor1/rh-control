@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.auth import (
@@ -20,8 +21,9 @@ router = APIRouter(
 
 
 def autenticar_usuario(email: str, senha: str, db: Session):
+    email_normalizado = email.strip().lower()
     usuario = db.query(Usuario).filter(
-        Usuario.email == email
+        func.lower(Usuario.email) == email_normalizado
     ).first()
 
     if not usuario:
@@ -81,8 +83,9 @@ def registrar_usuario(
                 detail="Acesso permitido apenas para administradores"
             )
 
+    email_normalizado = usuario.email.strip().lower()
     usuario_existente = db.query(Usuario).filter(
-        Usuario.email == usuario.email
+        func.lower(Usuario.email) == email_normalizado
     ).first()
 
     if usuario_existente:
@@ -93,7 +96,7 @@ def registrar_usuario(
 
     novo_usuario = Usuario(
         nome=usuario.nome,
-        email=usuario.email,
+        email=email_normalizado,
         senha_hash=gerar_hash_senha(usuario.senha),
         perfil=usuario.perfil
     )

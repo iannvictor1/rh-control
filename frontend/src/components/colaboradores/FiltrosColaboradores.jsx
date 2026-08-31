@@ -9,7 +9,7 @@ export default function FiltrosColaboradores({
 
       <input
         className="input w-full md:w-96"
-        placeholder="Buscar por nome, matricula, cargo, setor, CPF..."
+        placeholder="Buscar por nome, matrícula, cargo, setor, CPF..."
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
       />

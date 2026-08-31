@@ -10,9 +10,12 @@ import Faltas from "./pages/Faltas";
 import Atestados from "./pages/Atestados";
 import Advertencias from "./pages/Advertencias";
 import Suspensoes from "./pages/Suspensoes";
+import CalendarioRh from "./pages/CalendarioRh";
+import Ferias from "./pages/Ferias";
 import DetalheColaborador from "./pages/DetalheColaborador";
 import Usuarios from "./pages/Usuarios";
 import Exportacoes from "./pages/Exportacoes";
+import Notas from "./pages/Notas";
 
 export default function App() {
   return (
@@ -34,6 +37,9 @@ export default function App() {
           <Route path="/atestados" element={<Atestados />} />
           <Route path="/advertencias" element={<Advertencias />} />
           <Route path="/suspensoes" element={<Suspensoes />} />
+          <Route path="/ferias" element={<Ferias />} />
+          <Route path="/calendario-rh" element={<CalendarioRh />} />
+          <Route path="/notas" element={<Notas />} />
           <Route path="/exportacoes" element={<Exportacoes />} />
           <Route path="/usuarios" element={<Usuarios />} />
         </Route>
