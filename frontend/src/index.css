@@ -544,6 +544,23 @@ button {
   background: rgba(0, 0, 0, 0.12);
 }
 
+.nota-window-title-input {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  outline: none;
+  padding: 0.78rem 1rem 0.62rem;
+  width: 100%;
+}
+
+.nota-window-title-input::placeholder {
+  color: #bdbdbd;
+  font-weight: 600;
+}
+
 .nota-pin-icon {
   fill: none;
   height: 1.25rem;

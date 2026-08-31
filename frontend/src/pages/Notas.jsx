@@ -67,6 +67,24 @@ function TrashIcon() {
   );
 }
 
+function EditIcon() {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
 export default function Notas() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -216,6 +234,22 @@ export default function Notas() {
     window.dispatchEvent(new CustomEvent("notas:reabrir", {
       detail: { notaId: nota.id },
     }));
+  }
+
+  function editarNota(nota) {
+    setNotaEditando(nota);
+    setForm({
+      titulo: nota.titulo || "",
+      conteudo: nota.conteudo || "",
+      cor: nota.cor || "amarelo",
+      fixada: nota.fixada,
+    });
+
+    if (editorRef.current) {
+      editorRef.current.innerHTML = limparHtmlNota(nota.conteudo || "");
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function alternarNotaSelecionada(notaId) {
@@ -497,6 +531,15 @@ export default function Notas() {
                       className="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg text-sm font-semibold transition"
                     >
                       Abrir
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => editarNota(nota)}
+                      className="inline-flex items-center justify-center rounded-lg bg-zinc-700 p-2 text-white transition hover:bg-zinc-600"
+                      title="Editar nota"
+                      aria-label="Editar nota"
+                    >
+                      <EditIcon />
                     </button>
                     <button
                       type="button"

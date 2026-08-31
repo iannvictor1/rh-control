@@ -566,6 +566,29 @@ export default function NotasFlutuantes() {
     }
   }
 
+  function atualizarTituloLocal(notaId, titulo) {
+    setNotas((atuais) =>
+      atuais.map((item) =>
+        item.id === notaId ? { ...item, titulo } : item
+      )
+    );
+  }
+
+  async function salvarTitulo(nota, valor) {
+    const titulo = valor.trim();
+
+    try {
+      await api.put(`/notas/${nota.id}`, {
+        titulo,
+      });
+      window.dispatchEvent(new Event("notas:atualizadas"));
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao salvar tÃ­tulo da nota."));
+      console.error(error);
+      carregarNotas();
+    }
+  }
+
   async function alternarFixada(nota) {
     try {
       const response = await api.put(`/notas/${nota.id}`, {
@@ -888,6 +911,16 @@ export default function NotasFlutuantes() {
               X
             </button>
           </div>
+
+          <input
+            className="nota-window-title-input"
+            value={nota.titulo || ""}
+            onPointerDown={(e) => e.stopPropagation()}
+            onChange={(e) => atualizarTituloLocal(nota.id, e.target.value)}
+            onBlur={(e) => salvarTitulo(nota, e.currentTarget.value)}
+            placeholder="TÃ­tulo"
+            aria-label="TÃ­tulo da nota"
+          />
 
           <div
             className="nota-window-editor"
