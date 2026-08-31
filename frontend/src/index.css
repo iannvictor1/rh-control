@@ -221,6 +221,65 @@ button {
     transform 0.18s ease;
 }
 
+.sidebar-link-row {
+  align-items: center;
+  border-radius: 0.62rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.15rem 2.15rem;
+  overflow: hidden;
+}
+
+.sidebar-link-notas {
+  border-radius: 0.62rem 0 0 0.62rem;
+}
+
+.sidebar-link-row-active {
+  background: #f8fafc;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-link-row-active .sidebar-link-active {
+  box-shadow: none;
+}
+
+.sidebar-note-action {
+  align-items: center;
+  color: #cbd5e1;
+  display: inline-flex;
+  font-size: 1.35rem;
+  font-weight: 500;
+  height: 2.42rem;
+  justify-content: center;
+  line-height: 1;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.sidebar-note-action svg {
+  fill: none;
+  height: 1rem;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  width: 1rem;
+}
+
+.sidebar-link-row-active .sidebar-note-action {
+  color: #111827;
+}
+
+.sidebar-note-action:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.sidebar-link-row-active .sidebar-note-action:hover {
+  background: rgba(17, 24, 39, 0.08);
+  color: #111827;
+}
+
 .sidebar-link:hover {
   background: rgba(255, 255, 255, 0.06);
   color: #f8fafc;

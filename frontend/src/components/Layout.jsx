@@ -140,6 +140,15 @@ function LogoutIcon() {
   );
 }
 
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7.6 3.8h8.8l1.1 4.9-3.1 2.9 2.1 6.2-4.5-2.1-4.5 2.1 2.1-6.2-3.1-2.9 1.1-4.9Z" />
+      <path d="M12 15.7v5" />
+    </svg>
+  );
+}
+
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -192,6 +201,14 @@ export default function Layout() {
     navigate("/login");
   }
 
+  function criarNota() {
+    window.dispatchEvent(new Event("notas:criar"));
+  }
+
+  function abrirNotasFixadas() {
+    window.dispatchEvent(new Event("notas:abrir-fixadas"));
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col md:flex-row">
       <aside className="sidebar-shell">
@@ -205,14 +222,49 @@ export default function Layout() {
 
           <nav className="sidebar-nav">
             {links.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`sidebar-link ${estaAtivo(link.to) ? "sidebar-link-active" : ""}`}
-              >
-                {link.icon}
-                <span>{link.label}</span>
-              </Link>
+              link.to === "/notas" ? (
+                <div
+                  key={link.to}
+                  className={`sidebar-link-row ${estaAtivo(link.to) ? "sidebar-link-row-active" : ""}`}
+                >
+                  <Link
+                    to={link.to}
+                    className={`sidebar-link sidebar-link-notas ${estaAtivo(link.to) ? "sidebar-link-active" : ""}`}
+                  >
+                    {link.icon}
+                    <span>{link.label}</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    className="sidebar-note-action"
+                    onClick={criarNota}
+                    aria-label="Nova nota"
+                    title="Nova nota"
+                  >
+                    +
+                  </button>
+
+                  <button
+                    type="button"
+                    className="sidebar-note-action"
+                    onClick={abrirNotasFixadas}
+                    aria-label="Abrir notas fixadas"
+                    title="Abrir notas fixadas"
+                  >
+                    <PinIcon />
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={`sidebar-link ${estaAtivo(link.to) ? "sidebar-link-active" : ""}`}
+                >
+                  {link.icon}
+                  <span>{link.label}</span>
+                </Link>
+              )
             ))}
           </nav>
         </div>

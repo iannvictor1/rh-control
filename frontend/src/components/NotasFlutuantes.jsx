@@ -467,6 +467,24 @@ export default function NotasFlutuantes() {
   }
 
   useEffect(() => {
+    function criarNotaPelaSidebar() {
+      criarNota();
+    }
+
+    function abrirFixadasPelaSidebar() {
+      abrirNotasFixadas();
+    }
+
+    window.addEventListener("notas:criar", criarNotaPelaSidebar);
+    window.addEventListener("notas:abrir-fixadas", abrirFixadasPelaSidebar);
+
+    return () => {
+      window.removeEventListener("notas:criar", criarNotaPelaSidebar);
+      window.removeEventListener("notas:abrir-fixadas", abrirFixadasPelaSidebar);
+    };
+  }, [notas]);
+
+  useEffect(() => {
     function reabrirNota(evento) {
       const nota = evento.detail?.nota;
       const notaId = evento.detail?.notaId || nota?.id;
@@ -740,24 +758,6 @@ export default function NotasFlutuantes() {
     return (
       <div className="notas-flutuantes fixed inset-0 pointer-events-none">
         {janelaListaNotas()}
-        <div className="nota-acoes-flutuantes pointer-events-auto">
-          <button
-            type="button"
-            onClick={criarNota}
-            className="nota-nova-flutuante"
-            title="Nova nota"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            onClick={abrirNotasFixadas}
-            className="nota-nova-flutuante"
-            title="Abrir notas fixadas"
-          >
-            <PinIcon />
-          </button>
-        </div>
       </div>
     );
   }
