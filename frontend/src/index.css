@@ -853,8 +853,8 @@ button {
   display: flex;
   gap: 0.45rem;
   position: fixed;
+  bottom: 1rem;
   right: 1rem;
-  top: 1rem;
   z-index: 80;
 }
 
