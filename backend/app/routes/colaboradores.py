@@ -82,7 +82,48 @@ def limpar_texto(valor):
         return None
 
     texto = str(valor).strip()
+
+    if normalizar_texto(texto) in {
+        "nan",
+        "none",
+        "null",
+        "nulo",
+        "sem_email",
+        "sem_telefone",
+        "nao_informado",
+        "nao_informada",
+    }:
+        return None
+
+    if re.fullmatch(r"[-_.\s]+", texto):
+        return None
+
     return texto or None
+
+
+def normalizar_email_importacao(valor):
+    texto = limpar_texto(valor)
+
+    if not texto:
+        return None
+
+    texto = texto.lower()
+
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", texto):
+        return None
+
+    return texto
+
+
+def normalizar_telefone_importacao(valor):
+    texto = limpar_texto(valor)
+
+    if not texto:
+        return None
+
+    digitos = re.sub(r"\D", "", texto)
+
+    return digitos or None
 
 
 def normalizar_cpf_importacao(valor):
@@ -330,6 +371,10 @@ def montar_campos_importacao(headers, valores):
             campos[campo] = normalizar_salario(valor)
         elif campo.startswith("data_"):
             campos[campo] = normalizar_data(valor)
+        elif campo == "email":
+            campos[campo] = normalizar_email_importacao(valor)
+        elif campo in {"telefone", "telefone_emergencia"}:
+            campos[campo] = normalizar_telefone_importacao(valor)
         else:
             campos[campo] = limpar_texto(valor)
 
