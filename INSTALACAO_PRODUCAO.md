@@ -59,7 +59,22 @@ Teste a API:
 http://IP_DO_SERVIDOR/api/health
 ```
 
-## 4. Atualizar o sistema
+## 4. Criar o primeiro usuario
+
+Quando o banco estiver zerado, crie o primeiro usuario administrador pela API:
+
+```powershell
+.\scripts\producao\criar_primeiro_admin.ps1 `
+  -AppUrl "http://IP_DO_SERVIDOR" `
+  -Nome "Administrador" `
+  -Email "admin@empresa.com"
+```
+
+O script vai pedir a senha no terminal. Depois disso, entre no sistema usando esse e-mail e essa senha.
+
+Se aparecer erro de autenticacao obrigatoria, significa que ja existe pelo menos um usuario no banco. Nesse caso, entre com o usuario existente ou crie novos usuarios pela aba `Usuarios` usando uma conta admin.
+
+## 5. Atualizar o sistema
 
 Depois de alterar o código:
 
@@ -69,7 +84,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 
 As migrações do banco são aplicadas automaticamente quando o backend inicia.
 
-## 5. Backup básico do banco
+## 6. Backup básico do banco
 
 ```powershell
 docker compose --env-file .env.production -f docker-compose.prod.yml exec db pg_dump -U rh_control rh_control > backup_rh_control.sql
@@ -77,7 +92,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml exec db pg_
 
 Guarde também o volume de uploads, pois ele contém anexos de atestados.
 
-## 6. Parar o sistema
+## 7. Parar o sistema
 
 ```powershell
 docker compose --env-file .env.production -f docker-compose.prod.yml down
@@ -85,7 +100,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml down
 
 Para remover dados do banco e uploads, remova os volumes manualmente apenas se tiver certeza.
 
-## 7. Iniciar automaticamente com o Windows
+## 8. Iniciar automaticamente com o Windows
 
 No computador de producao, abra o PowerShell como Administrador dentro da pasta do projeto e rode:
 
@@ -113,7 +128,7 @@ Se o computador usar Docker Desktop e ele so iniciar depois do login do usuario,
 .\scripts\producao\instalar_tarefa_windows.ps1 -ProjectDir "C:\RH-Control" -TaskName "RHControl" -Trigger Logon
 ```
 
-## 8. Atualizar remotamente a producao
+## 9. Atualizar remotamente a producao
 
 No computador de producao, habilite o PowerShell Remoting uma vez, em PowerShell como Administrador:
 
