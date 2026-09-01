@@ -84,3 +84,57 @@ docker compose --env-file .env.production -f docker-compose.prod.yml down
 ```
 
 Para remover dados do banco e uploads, remova os volumes manualmente apenas se tiver certeza.
+
+## 7. Iniciar automaticamente com o Windows
+
+No computador de producao, abra o PowerShell como Administrador dentro da pasta do projeto e rode:
+
+```powershell
+.\scripts\producao\instalar_tarefa_windows.ps1 -ProjectDir "C:\RH-Control" -TaskName "RHControl"
+```
+
+Isso cria uma tarefa no Agendador de Tarefas do Windows para subir o sistema com Docker Compose sempre que o Windows iniciar.
+
+Para testar manualmente:
+
+```powershell
+Start-ScheduledTask -TaskName "RHControl"
+```
+
+Para ver se subiu:
+
+```powershell
+docker compose --env-file .env.production -f docker-compose.prod.yml ps
+```
+
+Se o computador usar Docker Desktop e ele so iniciar depois do login do usuario, instale a tarefa com gatilho de logon:
+
+```powershell
+.\scripts\producao\instalar_tarefa_windows.ps1 -ProjectDir "C:\RH-Control" -TaskName "RHControl" -Trigger Logon
+```
+
+## 8. Atualizar remotamente a producao
+
+No computador de producao, habilite o PowerShell Remoting uma vez, em PowerShell como Administrador:
+
+```powershell
+Enable-PSRemoting -Force
+```
+
+No seu computador, se estiver em rede local sem dominio, adicione o IP da producao aos hosts confiaveis:
+
+```powershell
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value "IP_DA_PRODUCAO" -Force
+```
+
+Depois de fazer uma alteracao, commit e push no GitHub, atualize a producao pelo seu computador:
+
+```powershell
+.\scripts\producao\atualizar_remoto.ps1 `
+  -ComputerName "IP_DA_PRODUCAO" `
+  -ProjectDir "C:\RH-Control" `
+  -TaskName "RHControl" `
+  -UserName "USUARIO_DA_PRODUCAO"
+```
+
+O script entra no computador de producao, executa `git pull`, constroi os containers novamente e reinicia o sistema com Docker Compose.
