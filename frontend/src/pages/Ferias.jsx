@@ -44,6 +44,22 @@ function statusClasse(status) {
   return "bg-green-500/20 text-green-300";
 }
 
+function textoAlertaLimite(alerta) {
+  if (!alerta.status_limite_ferias || alerta.dias_para_limite_ferias === null) {
+    return "Sem alerta de limite";
+  }
+
+  if (alerta.dias_para_limite_ferias < 0) {
+    return `Data limite vencida há ${Math.abs(alerta.dias_para_limite_ferias)} dia(s)`;
+  }
+
+  if (alerta.dias_para_limite_ferias === 0) {
+    return "Data limite vence hoje";
+  }
+
+  return `Data limite em ${alerta.dias_para_limite_ferias} dia(s)`;
+}
+
 function formatarPeriodoAquisitivo(alerta) {
   if (alerta.data_base_ferias && alerta.data_fim_periodo_aquisitivo) {
     return `${formatarData(alerta.data_base_ferias)} a ${formatarData(alerta.data_fim_periodo_aquisitivo)}`;
@@ -112,7 +128,9 @@ export default function Ferias() {
         ]);
 
         setColaboradores(resColaboradores.data);
-        setAlertasVencimento(resAlertas.data.filter((item) => item.status !== "Em dia"));
+        setAlertasVencimento(resAlertas.data.filter(
+          (item) => item.status !== "Em dia" || item.alerta_data_limite_ferias
+        ));
         setFeriasRegistradas(resFerias.data);
       } catch (error) {
         toast.error("Erro ao carregar dados de férias.");
@@ -130,7 +148,9 @@ export default function Ferias() {
         api.get("/ferias/"),
       ]);
 
-      setAlertasVencimento(resAlertas.data.filter((item) => item.status !== "Em dia"));
+      setAlertasVencimento(resAlertas.data.filter(
+        (item) => item.status !== "Em dia" || item.alerta_data_limite_ferias
+      ));
       setFeriasRegistradas(resFerias.data);
     } catch (error) {
       toast.error("Erro ao atualizar painel de férias.");
@@ -292,6 +312,11 @@ export default function Ferias() {
                     <p className="text-sm text-zinc-400">
                       Vencimento: {formatarData(alerta.vencimento_ferias)} | Limite: {formatarData(alerta.data_limite_ferias)}
                     </p>
+                    {alerta.alerta_data_limite_ferias && (
+                      <p className="text-sm font-semibold text-yellow-300">
+                        {textoAlertaLimite(alerta)}
+                      </p>
+                    )}
                   </div>
                   <span className={`w-fit rounded-full px-3 py-1 text-sm font-semibold ${statusClasse(alerta.status)}`}>
                     {alerta.status} | {Math.abs(alerta.dias_para_vencer)} dia(s)

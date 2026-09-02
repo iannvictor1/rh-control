@@ -164,6 +164,7 @@ def montar_status_ferias(
         )
 
     dias_para_vencer = (vencimento - hoje).days
+    dias_para_limite = (data_limite - hoje).days if data_limite else None
 
     if dias_para_vencer < 0:
         status = "Vencido"
@@ -171,6 +172,15 @@ def montar_status_ferias(
         status = "Vencendo"
     else:
         status = "Em dia"
+
+    if dias_para_limite is None:
+        status_limite = None
+    elif dias_para_limite < 0:
+        status_limite = "Limite vencido"
+    elif dias_para_limite <= 30:
+        status_limite = "Limite vencendo"
+    else:
+        status_limite = "Limite em dia"
 
     return {
         "id": colaborador.id,
@@ -182,6 +192,11 @@ def montar_status_ferias(
         "data_limite_ferias": data_limite,
         "status": status,
         "dias_para_vencer": dias_para_vencer,
+        "status_limite_ferias": status_limite,
+        "dias_para_limite_ferias": dias_para_limite,
+        "alerta_data_limite_ferias": (
+            dias_para_limite is not None and dias_para_limite <= 30
+        ),
     }
 
 
@@ -381,6 +396,8 @@ def resumo_dashboard(
 
     ferias_vencidas = 0
     ferias_vencendo_30_dias = 0
+    ferias_limite_vencidas = 0
+    ferias_limite_vencendo_30_dias = 0
     ultimos_retornos = listar_ultimos_retornos_ferias(db)
 
     for colaborador in colaboradores_com_ferias:
@@ -390,6 +407,11 @@ def resumo_dashboard(
             ferias_vencidas += 1
         elif alerta["status"] == "Vencendo":
             ferias_vencendo_30_dias += 1
+
+        if alerta["status_limite_ferias"] == "Limite vencido":
+            ferias_limite_vencidas += 1
+        elif alerta["status_limite_ferias"] == "Limite vencendo":
+            ferias_limite_vencendo_30_dias += 1
 
     return {
         "total_colaboradores": total_colaboradores,
@@ -405,6 +427,8 @@ def resumo_dashboard(
         "experiencias_vencendo_30_dias": experiencias_vencendo_30_dias,
         "ferias_vencidas": ferias_vencidas,
         "ferias_vencendo_30_dias": ferias_vencendo_30_dias,
+        "ferias_limite_vencidas": ferias_limite_vencidas,
+        "ferias_limite_vencendo_30_dias": ferias_limite_vencendo_30_dias,
     }
 
 

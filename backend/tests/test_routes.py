@@ -771,6 +771,47 @@ def test_dashboard_ferias_usa_periodo_aquisitivo_importado(tmp_path, monkeypatch
     assert alerta["vencimento_ferias"] == "2026-06-10"
     assert alerta["data_limite_ferias"] == "2027-03-09"
     assert alerta["status"] == "Vencendo"
+    assert alerta["status_limite_ferias"] == "Limite em dia"
+    assert alerta["alerta_data_limite_ferias"] is False
+
+    app.dependency_overrides.clear()
+
+
+def test_dashboard_ferias_alerta_data_limite(tmp_path, monkeypatch):
+    class DataFixa(date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 8, 1)
+
+    monkeypatch.setattr(dashboard_route, "date", DataFixa)
+    client, SessionLocal = criar_cliente_teste(tmp_path)
+
+    db = SessionLocal()
+    db.add(Colaborador(
+        nome="Ana",
+        data_admissao=date(2020, 1, 10),
+        data_inicio_periodo_aquisitivo=date(2024, 11, 19),
+        data_fim_periodo_aquisitivo=date(2025, 11, 18),
+        data_limite_ferias=date(2026, 8, 18),
+        ativo=True,
+    ))
+    db.commit()
+    db.close()
+
+    response = client.get("/dashboard/resumo")
+
+    assert response.status_code == 200
+    assert response.json()["ferias_limite_vencidas"] == 0
+    assert response.json()["ferias_limite_vencendo_30_dias"] == 1
+
+    response = client.get("/dashboard/ferias")
+
+    assert response.status_code == 200
+    alerta = response.json()[0]
+    assert alerta["status"] == "Vencido"
+    assert alerta["status_limite_ferias"] == "Limite vencendo"
+    assert alerta["dias_para_limite_ferias"] == 17
+    assert alerta["alerta_data_limite_ferias"] is True
 
     app.dependency_overrides.clear()
 

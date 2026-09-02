@@ -608,6 +608,8 @@ class DashboardResumoResponse(BaseModel):
     experiencias_vencendo_30_dias: int
     ferias_vencidas: int
     ferias_vencendo_30_dias: int
+    ferias_limite_vencidas: int
+    ferias_limite_vencendo_30_dias: int
 
 
 class DashboardAsoResponse(BaseModel):
@@ -655,6 +657,9 @@ class DashboardFeriasResponse(BaseModel):
     data_limite_ferias: date | None = None
     status: str
     dias_para_vencer: int
+    status_limite_ferias: str | None = None
+    dias_para_limite_ferias: int | None = None
+    alerta_data_limite_ferias: bool = False
 
 
 class DashboardScoreResponse(BaseModel):

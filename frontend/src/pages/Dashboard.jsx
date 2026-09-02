@@ -24,6 +24,19 @@ function textoDiasAso(dias) {
   return `${dias} dia(s)`;
 }
 
+function textoDiasLimiteFerias(dias) {
+  if (dias === null || dias === undefined) return "-";
+  if (dias < 0) return `${Math.abs(dias)} dia(s) vencido`;
+  if (dias === 0) return "Limite hoje";
+  return `${dias} dia(s)`;
+}
+
+function classeStatusLimiteFerias(status) {
+  if (status === "Limite vencido") return "bg-red-500/20 text-red-400";
+  if (status === "Limite vencendo") return "bg-yellow-500/20 text-yellow-300";
+  return "bg-zinc-700/60 text-zinc-300";
+}
+
 function formatarMes(mes) {
   const [ano, numeroMes] = mes.split("-");
   return `${numeroMes}/${ano.slice(2)}`;
@@ -181,15 +194,17 @@ export default function Dashboard() {
     {
       titulo: "Férias em alerta",
       valor: dados.ferias_vencidas + dados.ferias_vencendo_30_dias,
-      detalhe: `${dados.ferias_vencidas} vencidas, ${dados.ferias_vencendo_30_dias} vencendo`,
-      to: "/calendario-rh",
-      cor: dados.ferias_vencidas > 0 ? "text-red-400" : "text-emerald-300",
+      detalhe: `${dados.ferias_vencidas} vencidas, ${dados.ferias_vencendo_30_dias} vencendo, ${(dados.ferias_limite_vencidas || 0) + (dados.ferias_limite_vencendo_30_dias || 0)} no limite`,
+      to: "/ferias",
+      cor: dados.ferias_vencidas > 0 || dados.ferias_limite_vencidas > 0 ? "text-red-400" : "text-emerald-300",
     },
   ];
 
   const asosEmAlerta = asos.filter((aso) => aso.status !== "Em dia");
   const experienciasEmAlerta = experiencias.filter((item) => item.status !== "Em dia");
-  const feriasEmAlerta = ferias.filter((item) => item.status !== "Em dia");
+  const feriasEmAlerta = ferias.filter(
+    (item) => item.status !== "Em dia" || item.alerta_data_limite_ferias
+  );
   const maxMensal = Math.max(
     1,
     ...mensal.flatMap((item) => [
@@ -486,6 +501,7 @@ export default function Dashboard() {
                   <th>Período aquisitivo</th>
                   <th>Vencimento</th>
                   <th>Data limite</th>
+                  <th>Alerta limite</th>
                   <th>Status</th>
                   <th>Prazo</th>
                 </tr>
@@ -505,6 +521,11 @@ export default function Dashboard() {
                     <td>{formatarPeriodoFerias(item)}</td>
                     <td>{formatarData(item.vencimento_ferias)}</td>
                     <td>{formatarData(item.data_limite_ferias)}</td>
+                    <td>
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${classeStatusLimiteFerias(item.status_limite_ferias)}`}>
+                        {item.status_limite_ferias || "Sem limite"} | {textoDiasLimiteFerias(item.dias_para_limite_ferias)}
+                      </span>
+                    </td>
                     <td>
                       <span className={`px-3 py-1 rounded-full text-sm font-semibold ${classeStatusAso(item.status)}`}>
                         {item.status}
