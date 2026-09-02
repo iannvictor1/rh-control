@@ -33,6 +33,21 @@ function Wait-Docker {
   throw "Docker nao respondeu dentro de $TimeoutSeconds segundos."
 }
 
+function Use-DockerConfigSemCredenciais {
+  param([string]$ProjectDir)
+
+  $dockerConfigDir = Join-Path $ProjectDir "logs\docker-config"
+  $dockerConfigFile = Join-Path $dockerConfigDir "config.json"
+
+  New-Item -ItemType Directory -Force -Path $dockerConfigDir | Out-Null
+
+  if (-not (Test-Path -LiteralPath $dockerConfigFile)) {
+    '{"auths":{}}' | Set-Content -LiteralPath $dockerConfigFile -Encoding UTF8
+  }
+
+  $env:DOCKER_CONFIG = $dockerConfigDir
+}
+
 if (-not (Test-Path -LiteralPath $ProjectDir)) {
   throw "Pasta do projeto nao encontrada: $ProjectDir"
 }
@@ -62,6 +77,7 @@ try {
 }
 
 Set-Location -LiteralPath $ProjectDir
+Use-DockerConfigSemCredenciais -ProjectDir $ProjectDir
 Wait-Docker -TimeoutSeconds $DockerTimeoutSeconds
 
 docker compose --env-file $EnvFile -f $ComposeFile up -d

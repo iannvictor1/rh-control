@@ -22,6 +22,21 @@ $scriptBlock = {
 
   $ErrorActionPreference = "Stop"
 
+  function Use-DockerConfigSemCredenciais {
+    param([string]$ProjectDir)
+
+    $dockerConfigDir = Join-Path $ProjectDir "logs\docker-config"
+    $dockerConfigFile = Join-Path $dockerConfigDir "config.json"
+
+    New-Item -ItemType Directory -Force -Path $dockerConfigDir | Out-Null
+
+    if (-not (Test-Path -LiteralPath $dockerConfigFile)) {
+      '{"auths":{}}' | Set-Content -LiteralPath $dockerConfigFile -Encoding UTF8
+    }
+
+    $env:DOCKER_CONFIG = $dockerConfigDir
+  }
+
   function Invoke-Native {
     param(
       [Parameter(Mandatory = $true)]
@@ -69,6 +84,7 @@ $scriptBlock = {
   }
 
   Set-Location -LiteralPath $ProjectDir
+  Use-DockerConfigSemCredenciais -ProjectDir $ProjectDir
 
   Invoke-Native `
     -FilePath "git" `
