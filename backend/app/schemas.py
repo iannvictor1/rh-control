@@ -71,8 +71,8 @@ class ColaboradorCreate(BaseModel):
     data_desligamento: date | None = None
     motivo_desligamento: str | None = None
     data_aso: date | None = None
-    data_limite_ferias: date | None = None
-    data_limite_ferias: date | None = None
+    data_inicio_periodo_aquisitivo: date | None = None
+    data_fim_periodo_aquisitivo: date | None = None
     data_limite_ferias: date | None = None
     endereco: str | None = None
     email: str | None = None
@@ -129,6 +129,9 @@ class ColaboradorUpdate(BaseModel):
     data_desligamento: date | None = None
     motivo_desligamento: str | None = None
     data_aso: date | None = None
+    data_inicio_periodo_aquisitivo: date | None = None
+    data_fim_periodo_aquisitivo: date | None = None
+    data_limite_ferias: date | None = None
     endereco: str | None = None
     email: str | None = None
     telefone: str | None = None
@@ -188,6 +191,9 @@ class ColaboradorResponse(BaseModel):
     data_desligamento: date | None = None
     motivo_desligamento: str | None = None
     data_aso: date | None = None
+    data_inicio_periodo_aquisitivo: date | None = None
+    data_fim_periodo_aquisitivo: date | None = None
+    data_limite_ferias: date | None = None
     endereco: str | None = None
     email: str | None = None
     telefone: str | None = None
@@ -644,7 +650,9 @@ class DashboardFeriasResponse(BaseModel):
     nome: str
     data_admissao: date
     data_base_ferias: date
+    data_fim_periodo_aquisitivo: date | None = None
     vencimento_ferias: date
+    data_limite_ferias: date | None = None
     status: str
     dias_para_vencer: int
 

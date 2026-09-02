@@ -70,6 +70,23 @@ def calcular_vencimento_ferias(data_admissao: date):
         )
 
 
+def adicionar_meses(data_base: date, meses: int):
+    mes_total = data_base.month - 1 + meses
+    ano = data_base.year + mes_total // 12
+    mes = mes_total % 12 + 1
+    ultimo_dia_mes = (
+        date(ano + 1, 1, 1)
+        if mes == 12
+        else date(ano, mes + 1, 1)
+    ).toordinal() - date(ano, mes, 1).toordinal()
+
+    return date(ano, mes, min(data_base.day, ultimo_dia_mes))
+
+
+def calcular_data_limite_ferias(data_base: date):
+    return adicionar_meses(data_base, 9)
+
+
 def listar_ultimos_retornos_ferias(db: Session):
     return dict(
         db.query(
@@ -124,13 +141,28 @@ def montar_status_ferias(
     ultimos_retornos: dict[int, date] | None = None,
 ):
     ultimo_retorno = (ultimos_retornos or {}).get(colaborador.id)
-    data_base = ultimo_retorno or colaborador.data_admissao
-    vencimento = (
-        calcular_vencimento_ferias(ultimo_retorno)
-        if ultimo_retorno
-        else colaborador.data_limite_ferias
-        or calcular_vencimento_ferias(colaborador.data_admissao)
-    )
+    fim_periodo = None
+
+    if ultimo_retorno:
+        data_base = ultimo_retorno
+        vencimento = calcular_vencimento_ferias(ultimo_retorno)
+        fim_periodo = vencimento - timedelta(days=1)
+        data_limite = calcular_data_limite_ferias(fim_periodo)
+    elif colaborador.data_inicio_periodo_aquisitivo and colaborador.data_fim_periodo_aquisitivo:
+        data_base = colaborador.data_inicio_periodo_aquisitivo
+        fim_periodo = colaborador.data_fim_periodo_aquisitivo
+        vencimento = fim_periodo + timedelta(days=1)
+        data_limite = colaborador.data_limite_ferias or calcular_data_limite_ferias(
+            fim_periodo
+        )
+    else:
+        data_base = colaborador.data_admissao
+        vencimento = calcular_vencimento_ferias(colaborador.data_admissao)
+        fim_periodo = vencimento - timedelta(days=1)
+        data_limite = colaborador.data_limite_ferias or calcular_data_limite_ferias(
+            fim_periodo
+        )
+
     dias_para_vencer = (vencimento - hoje).days
 
     if dias_para_vencer < 0:
@@ -145,7 +177,9 @@ def montar_status_ferias(
         "nome": colaborador.nome,
         "data_admissao": colaborador.data_admissao,
         "data_base_ferias": data_base,
+        "data_fim_periodo_aquisitivo": fim_periodo,
         "vencimento_ferias": vencimento,
+        "data_limite_ferias": data_limite,
         "status": status,
         "dias_para_vencer": dias_para_vencer,
     }

@@ -29,6 +29,14 @@ function formatarMes(mes) {
   return `${numeroMes}/${ano.slice(2)}`;
 }
 
+function formatarPeriodoFerias(item) {
+  if (item.data_base_ferias && item.data_fim_periodo_aquisitivo) {
+    return `${formatarData(item.data_base_ferias)} a ${formatarData(item.data_fim_periodo_aquisitivo)}`;
+  }
+
+  return formatarData(item.data_base_ferias);
+}
+
 export default function Dashboard() {
   const [dados, setDados] = useState(null);
   const [asos, setAsos] = useState([]);
@@ -475,8 +483,9 @@ export default function Dashboard() {
               <thead>
                 <tr>
                   <th>Colaborador</th>
-                  <th>Base do período</th>
+                  <th>Período aquisitivo</th>
                   <th>Vencimento</th>
+                  <th>Data limite</th>
                   <th>Status</th>
                   <th>Prazo</th>
                 </tr>
@@ -493,8 +502,9 @@ export default function Dashboard() {
                         {item.nome}
                       </Link>
                     </td>
-                    <td>{formatarData(item.data_base_ferias)}</td>
+                    <td>{formatarPeriodoFerias(item)}</td>
                     <td>{formatarData(item.vencimento_ferias)}</td>
+                    <td>{formatarData(item.data_limite_ferias)}</td>
                     <td>
                       <span className={`px-3 py-1 rounded-full text-sm font-semibold ${classeStatusAso(item.status)}`}>
                         {item.status}

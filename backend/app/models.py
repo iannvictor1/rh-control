@@ -60,6 +60,8 @@ class Colaborador(Base):
     data_desligamento = Column(Date, nullable=True)
     motivo_desligamento = Column(String, nullable=True)
     data_aso = Column(Date, nullable=True)
+    data_inicio_periodo_aquisitivo = Column(Date, nullable=True)
+    data_fim_periodo_aquisitivo = Column(Date, nullable=True)
     data_limite_ferias = Column(Date, nullable=True)
 
     endereco = Column(String, nullable=True)

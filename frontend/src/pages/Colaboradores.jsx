@@ -28,6 +28,8 @@ const formInicial = {
   motivo_desligamento_opcao: "",
   motivo_desligamento: "",
   data_aso: "",
+  data_inicio_periodo_aquisitivo: "",
+  data_fim_periodo_aquisitivo: "",
   data_limite_ferias: "",
   endereco: "",
   email: "",
@@ -69,6 +71,19 @@ function formatarTelefone(valor) {
     .slice(0, 11)
     .replace(/(\d{2})(\d)/, "($1) $2")
     .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+function adicionarMesesDataInput(valor, meses) {
+  if (!valor) return "";
+
+  const [ano, mes, dia] = valor.split("-").map(Number);
+  if (!ano || !mes || !dia) return "";
+
+  const mesDestino = mes - 1 + meses;
+  const ultimoDiaMesDestino = new Date(ano, mesDestino + 1, 0).getDate();
+  const data = new Date(ano, mesDestino, Math.min(dia, ultimoDiaMesDestino));
+
+  return data.toISOString().slice(0, 10);
 }
 
 function listarLinhasImportacao(itens, limite = 8) {
@@ -175,6 +190,17 @@ export default function Colaboradores() {
       return;
     }
 
+    if (name === "data_fim_periodo_aquisitivo") {
+      setForm({
+        ...form,
+        data_fim_periodo_aquisitivo: value,
+        data_limite_ferias: value
+          ? adicionarMesesDataInput(value, 9)
+          : form.data_limite_ferias,
+      });
+      return;
+    }
+
     setForm({
       ...form,
       [name]: valorFormatado,
@@ -212,6 +238,8 @@ export default function Colaboradores() {
       ),
       motivo_desligamento: colaborador.motivo_desligamento || "",
       data_aso: colaborador.data_aso || "",
+      data_inicio_periodo_aquisitivo: colaborador.data_inicio_periodo_aquisitivo || "",
+      data_fim_periodo_aquisitivo: colaborador.data_fim_periodo_aquisitivo || "",
       data_limite_ferias: colaborador.data_limite_ferias || "",
       endereco: colaborador.endereco || "",
       email: colaborador.email || "",
@@ -241,6 +269,8 @@ export default function Colaboradores() {
           ? form.motivo_desligamento
           : null,
         data_aso: form.data_aso || null,
+        data_inicio_periodo_aquisitivo: form.data_inicio_periodo_aquisitivo || null,
+        data_fim_periodo_aquisitivo: form.data_fim_periodo_aquisitivo || null,
         data_limite_ferias: form.data_limite_ferias || null,
       };
       delete dados.motivo_desligamento_opcao;

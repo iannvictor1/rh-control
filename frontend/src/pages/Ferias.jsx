@@ -44,6 +44,14 @@ function statusClasse(status) {
   return "bg-green-500/20 text-green-300";
 }
 
+function formatarPeriodoAquisitivo(alerta) {
+  if (alerta.data_base_ferias && alerta.data_fim_periodo_aquisitivo) {
+    return `${formatarData(alerta.data_base_ferias)} a ${formatarData(alerta.data_fim_periodo_aquisitivo)}`;
+  }
+
+  return formatarData(alerta.data_base_ferias);
+}
+
 export default function Ferias() {
   const [colaboradores, setColaboradores] = useState([]);
   const [alertasVencimento, setAlertasVencimento] = useState([]);
@@ -279,7 +287,10 @@ export default function Ferias() {
                   <div>
                     <strong>{alerta.nome}</strong>
                     <p className="text-sm text-zinc-400">
-                      Base: {formatarData(alerta.data_base_ferias)} | Vencimento: {formatarData(alerta.vencimento_ferias)}
+                      Período: {formatarPeriodoAquisitivo(alerta)}
+                    </p>
+                    <p className="text-sm text-zinc-400">
+                      Vencimento: {formatarData(alerta.vencimento_ferias)} | Limite: {formatarData(alerta.data_limite_ferias)}
                     </p>
                   </div>
                   <span className={`w-fit rounded-full px-3 py-1 text-sm font-semibold ${statusClasse(alerta.status)}`}>

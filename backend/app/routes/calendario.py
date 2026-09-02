@@ -8,11 +8,11 @@ from app.dependencies import get_db
 from app.models import AtestadoMedico, Colaborador, Falta, Suspensao
 from app.routes.dashboard import (
     calcular_vencimento_aso,
-    calcular_vencimento_ferias,
     calcular_vencimentos_experiencia,
     inicio_do_proximo_mes,
     listar_experiencias_concluidas,
     listar_ultimos_retornos_ferias,
+    montar_status_ferias,
 )
 from app.schemas import CalendarioEventoResponse
 
@@ -228,19 +228,23 @@ def calendario_rh(
         hoje = date.today()
         ultimos_retornos = listar_ultimos_retornos_ferias(db)
         for colaborador in colaboradores:
-            ultimo_retorno = ultimos_retornos.get(colaborador.id)
-            data_base = ultimo_retorno or colaborador.data_admissao
-            vencimento = (
-                calcular_vencimento_ferias(ultimo_retorno)
-                if ultimo_retorno
-                else colaborador.data_limite_ferias
-                or calcular_vencimento_ferias(colaborador.data_admissao)
+            alerta_ferias = montar_status_ferias(
+                colaborador,
+                hoje,
+                ultimos_retornos,
             )
+            data_base = alerta_ferias["data_base_ferias"]
+            fim_periodo = alerta_ferias["data_fim_periodo_aquisitivo"]
+            vencimento = alerta_ferias["vencimento_ferias"]
 
             if vencimento < inicio or vencimento > fim:
                 continue
 
-            status_ferias = "Vencido" if vencimento < hoje else "Vencendo"
+            status_ferias = alerta_ferias["status"]
+            descricao_ferias = (
+                f"Período aquisitivo de {data_base.strftime('%d/%m/%Y')} "
+                f"a {fim_periodo.strftime('%d/%m/%Y')}"
+            )
             eventos.append(
                 evento(
                     f"ferias-{colaborador.id}",
@@ -248,9 +252,7 @@ def calendario_rh(
                     "Férias",
                     vencimento,
                     colaborador,
-                    descricao=(
-                        f"Base do período em {data_base.strftime('%d/%m/%Y')}"
-                    ),
+                    descricao=descricao_ferias,
                     status=status_ferias,
                 )
             )

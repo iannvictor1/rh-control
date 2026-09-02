@@ -274,6 +274,27 @@ export default function ModalColaborador({
             />
           </Campo>
 
+          <Campo label="Início do período aquisitivo">
+            <input
+              className="input w-full"
+              type="date"
+              name="data_inicio_periodo_aquisitivo"
+              value={form.data_inicio_periodo_aquisitivo}
+              onChange={atualizarCampo}
+            />
+          </Campo>
+
+          <Campo label="Fim do período aquisitivo">
+            <input
+              className="input w-full"
+              type="date"
+              name="data_fim_periodo_aquisitivo"
+              value={form.data_fim_periodo_aquisitivo}
+              min={form.data_inicio_periodo_aquisitivo || undefined}
+              onChange={atualizarCampo}
+            />
+          </Campo>
+
           <Campo label="Data limite de férias">
             <input
               className="input w-full"

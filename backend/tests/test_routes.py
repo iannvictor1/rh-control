@@ -741,7 +741,7 @@ def test_dashboard_alerta_periodo_ferias(tmp_path, monkeypatch):
     app.dependency_overrides.clear()
 
 
-def test_dashboard_ferias_usa_data_limite_importada(tmp_path, monkeypatch):
+def test_dashboard_ferias_usa_periodo_aquisitivo_importado(tmp_path, monkeypatch):
     class DataFixa(date):
         @classmethod
         def today(cls):
@@ -754,7 +754,9 @@ def test_dashboard_ferias_usa_data_limite_importada(tmp_path, monkeypatch):
     db.add(Colaborador(
         nome="Ana",
         data_admissao=date(2020, 1, 10),
-        data_limite_ferias=date(2026, 6, 10),
+        data_inicio_periodo_aquisitivo=date(2025, 6, 10),
+        data_fim_periodo_aquisitivo=date(2026, 6, 9),
+        data_limite_ferias=date(2027, 3, 9),
         ativo=True,
     ))
     db.commit()
@@ -764,8 +766,10 @@ def test_dashboard_ferias_usa_data_limite_importada(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     alerta = response.json()[0]
-    assert alerta["data_base_ferias"] == "2020-01-10"
+    assert alerta["data_base_ferias"] == "2025-06-10"
+    assert alerta["data_fim_periodo_aquisitivo"] == "2026-06-09"
     assert alerta["vencimento_ferias"] == "2026-06-10"
+    assert alerta["data_limite_ferias"] == "2027-03-09"
     assert alerta["status"] == "Vencendo"
 
     app.dependency_overrides.clear()
@@ -808,7 +812,7 @@ def test_dashboard_ferias_conta_a_partir_do_retorno(tmp_path, monkeypatch):
     app.dependency_overrides.clear()
 
 
-def test_extrair_registros_ferias_pdf_escolhe_menor_data_limite():
+def test_extrair_registros_ferias_pdf_escolhe_periodo_aquisitivo_atual():
     texto = """
     CÃ³digo
     Empregado
@@ -845,12 +849,16 @@ def test_extrair_registros_ferias_pdf_escolhe_menor_data_limite():
         {
             "codigo": "000014",
             "nome": "FRANCISCO ELIONARDO GOMES DE LIMA",
-            "data_limite_ferias": date(2026, 10, 19),
+            "data_inicio_periodo_aquisitivo": date(2024, 11, 19),
+            "data_fim_periodo_aquisitivo": date(2025, 11, 18),
+            "data_limite_ferias": date(2026, 8, 18),
         },
         {
             "codigo": "000052",
             "nome": "HERBIA CASTRO LIMA",
-            "data_limite_ferias": date(2026, 12, 26),
+            "data_inicio_periodo_aquisitivo": date(2025, 1, 20),
+            "data_fim_periodo_aquisitivo": date(2026, 1, 19),
+            "data_limite_ferias": date(2026, 10, 19),
         },
     ]
 
@@ -1018,6 +1026,6 @@ def test_calendario_ferias_conta_a_partir_do_retorno(tmp_path):
     assert len(eventos) == 1
     assert eventos[0]["titulo"] == "Férias"
     assert eventos[0]["data_inicio"] == "2026-06-21"
-    assert eventos[0]["descricao"] == "Base do período em 21/06/2025"
+    assert eventos[0]["descricao"] == "Período aquisitivo de 21/06/2025 a 20/06/2026"
 
     app.dependency_overrides.clear()

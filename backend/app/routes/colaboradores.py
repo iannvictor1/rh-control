@@ -192,6 +192,19 @@ def normalizar_data(valor):
     raise ValueError(f"Data inválida: {texto}")
 
 
+def adicionar_meses(data_base: date, meses: int):
+    mes_total = data_base.month - 1 + meses
+    ano = data_base.year + mes_total // 12
+    mes = mes_total % 12 + 1
+    ultimo_dia_mes = (
+        date(ano + 1, 1, 1)
+        if mes == 12
+        else date(ano, mes + 1, 1)
+    ).toordinal() - date(ano, mes, 1).toordinal()
+
+    return date(ano, mes, min(data_base.day, ultimo_dia_mes))
+
+
 def extrair_texto_pdf(conteudo: bytes):
     try:
         leitor = PdfReader(BytesIO(conteudo))
@@ -239,18 +252,26 @@ def extrair_registros_ferias_pdf(texto: str):
                 periodo_indice = candidato
                 break
 
-        if periodo_indice is None or periodo_indice + 1 >= len(linhas):
+        if periodo_indice is None:
             continue
 
         try:
-            data_limite = normalizar_data(linhas[periodo_indice + 1])
+            inicio_periodo_texto, fim_periodo_texto = re.split(
+                r"\s+a\s+",
+                linhas[periodo_indice],
+                maxsplit=1,
+            )
+            inicio_periodo = normalizar_data(inicio_periodo_texto)
+            fim_periodo = normalizar_data(fim_periodo_texto)
         except ValueError:
             continue
 
         registros.append({
             "codigo": linha,
             "nome": nome,
-            "data_limite_ferias": data_limite,
+            "data_inicio_periodo_aquisitivo": inicio_periodo,
+            "data_fim_periodo_aquisitivo": fim_periodo,
+            "data_limite_ferias": adicionar_meses(fim_periodo, 9),
         })
 
     registros_por_nome = {}
@@ -261,7 +282,7 @@ def extrair_registros_ferias_pdf(texto: str):
 
         if (
             not atual
-            or registro["data_limite_ferias"] < atual["data_limite_ferias"]
+            or registro["data_fim_periodo_aquisitivo"] < atual["data_fim_periodo_aquisitivo"]
         ):
             registros_por_nome[chave] = registro
 
@@ -331,6 +352,12 @@ COLUNAS_IMPORTACAO = {
     "data_de_nascimento": "data_nascimento",
     "data_de_admissao": "data_admissao",
     "data_do_aso": "data_aso",
+    "inicio_do_periodo_aquisitivo": "data_inicio_periodo_aquisitivo",
+    "inicio_periodo_aquisitivo": "data_inicio_periodo_aquisitivo",
+    "data_inicio_periodo_aquisitivo": "data_inicio_periodo_aquisitivo",
+    "fim_do_periodo_aquisitivo": "data_fim_periodo_aquisitivo",
+    "fim_periodo_aquisitivo": "data_fim_periodo_aquisitivo",
+    "data_fim_periodo_aquisitivo": "data_fim_periodo_aquisitivo",
     "data_limite_de_ferias": "data_limite_ferias",
     "data_limite_ferias": "data_limite_ferias",
     "e_mail": "email",
@@ -508,7 +535,7 @@ async def importar_limite_ferias_pdf(
     if not registros:
         raise HTTPException(
             status_code=400,
-            detail="Nenhum funcionário com data limite foi encontrado no PDF",
+            detail="Nenhum funcionário com período aquisitivo foi encontrado no PDF",
         )
 
     empresa = detectar_empresa_relatorio_ferias(texto)
@@ -563,6 +590,12 @@ async def importar_limite_ferias_pdf(
             })
             continue
 
+        colaborador.data_inicio_periodo_aquisitivo = registro[
+            "data_inicio_periodo_aquisitivo"
+        ]
+        colaborador.data_fim_periodo_aquisitivo = registro[
+            "data_fim_periodo_aquisitivo"
+        ]
         colaborador.data_limite_ferias = registro["data_limite_ferias"]
         importados += 1
 
