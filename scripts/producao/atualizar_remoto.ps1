@@ -33,10 +33,34 @@ $scriptBlock = {
     )
 
     Write-Host ("> " + $FilePath + " " + ($Arguments -join " "))
-    & $FilePath @Arguments 2>&1 | ForEach-Object { Write-Host $_ }
 
-    if ($LASTEXITCODE -ne 0) {
-      throw "$ErrorMessage Codigo de saida: $LASTEXITCODE"
+    $saida = [System.IO.Path]::GetTempFileName()
+    $erro = [System.IO.Path]::GetTempFileName()
+
+    try {
+      $processo = Start-Process `
+        -FilePath $FilePath `
+        -ArgumentList $Arguments `
+        -WorkingDirectory (Get-Location).Path `
+        -NoNewWindow `
+        -Wait `
+        -PassThru `
+        -RedirectStandardOutput $saida `
+        -RedirectStandardError $erro
+
+      Get-Content -LiteralPath $saida -ErrorAction SilentlyContinue | ForEach-Object {
+        Write-Host $_
+      }
+
+      Get-Content -LiteralPath $erro -ErrorAction SilentlyContinue | ForEach-Object {
+        Write-Host $_
+      }
+
+      if ($processo.ExitCode -ne 0) {
+        throw "$ErrorMessage Codigo de saida: $($processo.ExitCode)"
+      }
+    } finally {
+      Remove-Item -LiteralPath $saida, $erro -Force -ErrorAction SilentlyContinue
     }
   }
 
