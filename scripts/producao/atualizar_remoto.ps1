@@ -22,16 +22,44 @@ $scriptBlock = {
 
   $ErrorActionPreference = "Stop"
 
+  function Invoke-Native {
+    param(
+      [Parameter(Mandatory = $true)]
+      [string]$FilePath,
+      [Parameter(Mandatory = $true)]
+      [string[]]$Arguments,
+      [Parameter(Mandatory = $true)]
+      [string]$ErrorMessage
+    )
+
+    Write-Host ("> " + $FilePath + " " + ($Arguments -join " "))
+    & $FilePath @Arguments 2>&1 | ForEach-Object { Write-Host $_ }
+
+    if ($LASTEXITCODE -ne 0) {
+      throw "$ErrorMessage Codigo de saida: $LASTEXITCODE"
+    }
+  }
+
   if (-not (Test-Path -LiteralPath $ProjectDir)) {
     throw "Pasta do projeto nao encontrada no servidor: $ProjectDir"
   }
 
   Set-Location -LiteralPath $ProjectDir
 
-  git fetch origin
-  git pull --ff-only origin $Branch
+  Invoke-Native `
+    -FilePath "git" `
+    -Arguments @("fetch", "origin") `
+    -ErrorMessage "Falha ao buscar atualizacoes no Git."
 
-  docker compose --env-file $EnvFile -f $ComposeFile up -d --build
+  Invoke-Native `
+    -FilePath "git" `
+    -Arguments @("pull", "--ff-only", "origin", $Branch) `
+    -ErrorMessage "Falha ao atualizar o repositorio local."
+
+  Invoke-Native `
+    -FilePath "docker" `
+    -Arguments @("compose", "--env-file", $EnvFile, "-f", $ComposeFile, "up", "-d", "--build") `
+    -ErrorMessage "Falha ao reconstruir e subir o sistema."
 
   $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 
@@ -39,7 +67,10 @@ $scriptBlock = {
     Start-ScheduledTask -TaskName $TaskName
   }
 
-  docker compose --env-file $EnvFile -f $ComposeFile ps
+  Invoke-Native `
+    -FilePath "docker" `
+    -Arguments @("compose", "--env-file", $EnvFile, "-f", $ComposeFile, "ps") `
+    -ErrorMessage "Falha ao listar containers."
 }
 
 $params = @{
