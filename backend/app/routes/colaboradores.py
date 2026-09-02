@@ -434,6 +434,7 @@ async def importar_colaboradores(
     headers = linhas[0]
     importados = 0
     ignorados = 0
+    linhas_ignoradas = []
     erros = []
     cpfs_planilha = set()
 
@@ -443,6 +444,10 @@ async def importar_colaboradores(
 
             if not campos.get("nome"):
                 ignorados += 1
+                linhas_ignoradas.append({
+                    "linha": numero_linha,
+                    "motivo": "Nome não informado",
+                })
                 continue
 
             campos["empresa"] = campos.get("empresa") or "C&M"
@@ -482,6 +487,7 @@ async def importar_colaboradores(
     return {
         "importados": importados,
         "ignorados": ignorados,
+        "linhas_ignoradas": linhas_ignoradas,
         "erros": erros,
     }
 

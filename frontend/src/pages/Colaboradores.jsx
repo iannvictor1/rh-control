@@ -301,11 +301,24 @@ export default function Colaboradores() {
           "Content-Type": "multipart/form-data",
         },
       });
-      const { importados, ignorados, erros } = response.data;
+      const { importados, ignorados, linhas_ignoradas = [], erros } = response.data;
 
       toast.success(
         `${importados} colaborador(es) importado(s). ${ignorados} linha(s) ignorada(s).`
       );
+
+      if (linhas_ignoradas.length > 0) {
+        const linhas = linhas_ignoradas
+          .slice(0, 8)
+          .map((item) => `linha ${item.linha}`)
+          .join(", ");
+        const complemento = linhas_ignoradas.length > 8 ? "..." : "";
+
+        toast(
+          `Ignoradas por nome vazio: ${linhas}${complemento}`,
+          { icon: "!" }
+        );
+      }
 
       if (erros.length > 0) {
         const primeiroErro = erros[0];
