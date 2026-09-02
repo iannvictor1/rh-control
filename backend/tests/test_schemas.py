@@ -53,6 +53,16 @@ def test_colaborador_aceita_data_aso_futura():
     assert colaborador.data_aso == date(2999, 1, 1)
 
 
+def test_colaborador_aceita_bonificacao_vazia():
+    colaborador = ColaboradorCreate(
+        nome="Ana",
+        tipo_bonificacao="Fixa",
+    )
+
+    assert colaborador.tipo_bonificacao == "Fixa"
+    assert colaborador.bonificacao is None
+
+
 def test_atestado_exige_dias_positivos():
     with pytest.raises(ValidationError):
         AtestadoMedicoCreate(

@@ -122,7 +122,6 @@ export default function ModalColaborador({
               name="tipo_bonificacao"
               value={form.tipo_bonificacao}
               onChange={atualizarCampo}
-              required
             >
               <option value="">Selecione</option>
               <option value="Fixa">Fixa</option>
@@ -140,7 +139,6 @@ export default function ModalColaborador({
                 name="bonificacao"
                 value={form.bonificacao}
                 onChange={atualizarCampo}
-                required
               />
             </Campo>
           )}

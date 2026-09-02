@@ -49,11 +49,6 @@ def validar_motivo_desligamento(data_desligamento, motivo_desligamento):
         raise ValueError("Motivo do desligamento é obrigatório")
 
 
-def validar_bonificacao_fixa(tipo_bonificacao, bonificacao):
-    if tipo_bonificacao == "Fixa" and bonificacao is None:
-        raise ValueError("Bonificação é obrigatória quando o tipo for Fixa")
-
-
 class ColaboradorCreate(BaseModel):
     empresa: EmpresaColaborador | None = None
     nome: str
@@ -104,10 +99,6 @@ class ColaboradorCreate(BaseModel):
         validar_motivo_desligamento(
             self.data_desligamento,
             self.motivo_desligamento,
-        )
-        validar_bonificacao_fixa(
-            self.tipo_bonificacao,
-            self.bonificacao,
         )
         return self
 
@@ -163,10 +154,6 @@ class ColaboradorUpdate(BaseModel):
         validar_motivo_desligamento(
             self.data_desligamento,
             self.motivo_desligamento,
-        )
-        validar_bonificacao_fixa(
-            self.tipo_bonificacao,
-            self.bonificacao,
         )
         return self
 
