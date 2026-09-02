@@ -71,6 +71,15 @@ function formatarTelefone(valor) {
     .replace(/(\d{5})(\d)/, "$1-$2");
 }
 
+function listarLinhasImportacao(itens, limite = 8) {
+  const linhas = itens
+    .slice(0, limite)
+    .map((item) => `linha ${item.linha}`)
+    .join(", ");
+
+  return itens.length > limite ? `${linhas}...` : linhas;
+}
+
 export default function Colaboradores() {
   const [colaboradores, setColaboradores] = useState([]);
   const [modalAberto, setModalAberto] = useState(false);
@@ -308,14 +317,8 @@ export default function Colaboradores() {
       );
 
       if (linhas_ignoradas.length > 0) {
-        const linhas = linhas_ignoradas
-          .slice(0, 8)
-          .map((item) => `linha ${item.linha}`)
-          .join(", ");
-        const complemento = linhas_ignoradas.length > 8 ? "..." : "";
-
         toast(
-          `Ignoradas por nome vazio: ${linhas}${complemento}`,
+          `Ignoradas por nome vazio: ${listarLinhasImportacao(linhas_ignoradas)}`,
           { icon: "!" }
         );
       }
@@ -323,7 +326,7 @@ export default function Colaboradores() {
       if (erros.length > 0) {
         const primeiroErro = erros[0];
         toast.error(
-          `${erros.length} linha(s) não foram importadas. Linha ${primeiroErro.linha}: ${primeiroErro.erro}`
+          `${erros.length} linha(s) com erro. Primeiras: ${listarLinhasImportacao(erros)}. Primeiro erro: linha ${primeiroErro.linha}: ${primeiroErro.erro}`
         );
       }
 
