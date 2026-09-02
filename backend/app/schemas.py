@@ -94,7 +94,6 @@ class ColaboradorCreate(BaseModel):
         "data_nascimento",
         "data_admissao",
         "data_desligamento",
-        "data_aso",
     )
     @classmethod
     def validar_datas(cls, valor):
@@ -151,7 +150,6 @@ class ColaboradorUpdate(BaseModel):
         "data_nascimento",
         "data_admissao",
         "data_desligamento",
-        "data_aso",
     )
     @classmethod
     def validar_datas(cls, valor):

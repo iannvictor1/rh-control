@@ -44,6 +44,15 @@ def test_colaborador_valida_cpf_com_11_digitos():
         ColaboradorCreate(nome="Ana", cpf="123")
 
 
+def test_colaborador_aceita_data_aso_futura():
+    colaborador = ColaboradorCreate(
+        nome="Ana",
+        data_aso=date(2999, 1, 1),
+    )
+
+    assert colaborador.data_aso == date(2999, 1, 1)
+
+
 def test_atestado_exige_dias_positivos():
     with pytest.raises(ValidationError):
         AtestadoMedicoCreate(
