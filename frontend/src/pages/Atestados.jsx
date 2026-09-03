@@ -127,7 +127,7 @@ export default function Atestados() {
       if (editando) {
         response = await api.put(`/atestados/${editando.id}`, dados);
       } else {
-        response = await api.post("/atestado/", dados);
+        response = await api.post("/atestados/", dados);
       }
 
       if (anexo) {
