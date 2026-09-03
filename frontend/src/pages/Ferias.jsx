@@ -44,6 +44,19 @@ function statusClasse(status) {
   return "bg-green-500/20 text-green-300";
 }
 
+function statusLimiteClasse(status) {
+  if (status === "Limite vencido") return "bg-red-500/20 text-red-300";
+  if (status === "Limite vencendo") return "bg-yellow-500/20 text-yellow-300";
+  return "bg-zinc-700/60 text-zinc-300";
+}
+
+function textoDias(dias) {
+  if (dias === null || dias === undefined) return "-";
+  if (dias < 0) return `${Math.abs(dias)} dia(s) vencido`;
+  if (dias === 0) return "Vence hoje";
+  return `${dias} dia(s)`;
+}
+
 function textoAlertaLimite(alerta) {
   if (!alerta.status_limite_ferias || alerta.dias_para_limite_ferias === null) {
     return "Sem alerta de limite";
@@ -71,6 +84,7 @@ function formatarPeriodoAquisitivo(alerta) {
 export default function Ferias() {
   const [colaboradores, setColaboradores] = useState([]);
   const [alertasVencimento, setAlertasVencimento] = useState([]);
+  const [statusFeriasTodos, setStatusFeriasTodos] = useState([]);
   const [feriasRegistradas, setFeriasRegistradas] = useState([]);
   const [form, setForm] = useState(formInicial);
   const [editando, setEditando] = useState(null);
@@ -127,6 +141,7 @@ export default function Ferias() {
           api.get("/ferias/"),
         ]);
 
+        setStatusFeriasTodos(resAlertas.data);
         setColaboradores(resColaboradores.data);
         setAlertasVencimento(resAlertas.data.filter(
           (item) => item.status !== "Em dia" || item.alerta_data_limite_ferias
@@ -148,6 +163,7 @@ export default function Ferias() {
         api.get("/ferias/"),
       ]);
 
+      setStatusFeriasTodos(resAlertas.data);
       setAlertasVencimento(resAlertas.data.filter(
         (item) => item.status !== "Em dia" || item.alerta_data_limite_ferias
       ));
@@ -434,6 +450,57 @@ export default function Ferias() {
         onPaginaChange={setPagina}
         textoTotal={`${total} férias encontrada(s)`}
       />
+
+      <section className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl overflow-x-auto">
+        <div className="p-5 border-b border-zinc-800 flex items-center justify-between gap-4">
+          <h3 className="text-xl font-bold">Todos os colaboradores</h3>
+          <span className="text-sm text-zinc-500">
+            {statusFeriasTodos.length} colaborador(es)
+          </span>
+        </div>
+
+        {statusFeriasTodos.length === 0 ? (
+          <p className="p-5 text-zinc-500">
+            Nenhum colaborador com período de férias encontrado.
+          </p>
+        ) : (
+          <table className="ranking-table">
+            <thead>
+              <tr>
+                <th>Colaborador</th>
+                <th>Período aquisitivo</th>
+                <th>Vencimento</th>
+                <th>Data limite</th>
+                <th>Alerta limite</th>
+                <th>Status</th>
+                <th>Prazo</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {statusFeriasTodos.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.nome}</td>
+                  <td>{formatarPeriodoAquisitivo(item)}</td>
+                  <td>{formatarData(item.vencimento_ferias)}</td>
+                  <td>{formatarData(item.data_limite_ferias)}</td>
+                  <td>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusLimiteClasse(item.status_limite_ferias)}`}>
+                      {item.status_limite_ferias || "Sem limite"} | {textoDias(item.dias_para_limite_ferias)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusClasse(item.status)}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td>{textoDias(item.dias_para_vencer)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
 
       <ConfirmDialog
         aberto={Boolean(feriasParaExcluir)}
