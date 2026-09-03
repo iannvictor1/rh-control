@@ -107,6 +107,7 @@ export default function Colaboradores() {
   const [total, setTotal] = useState(0);
   const [carregando, setCarregando] = useState(false);
   const [colaboradorParaInativar, setColaboradorParaInativar] = useState(null);
+  const [confirmarLimpezaFeriasPdf, setConfirmarLimpezaFeriasPdf] = useState(false);
 
   const [form, setForm] = useState(formInicial);
   const inputImportacaoRef = useRef(null);
@@ -388,7 +389,7 @@ export default function Colaboradores() {
       const { importados, ignorados, erros } = response.data;
 
       toast.success(
-        `${importados} data(s) limite de férias importada(s). ${ignorados} registro(s) ignorado(s).`
+        `${importados} período(s) aquisitivo(s) de férias importado(s). ${ignorados} registro(s) ignorado(s).`
       );
 
       if (erros.length > 0) {
@@ -404,6 +405,24 @@ export default function Colaboradores() {
       console.error(error);
     } finally {
       e.target.value = "";
+    }
+  }
+
+  async function limparImportacaoFeriasPdf() {
+    try {
+      const response = await api.delete("/colaboradores/importar-ferias-pdf");
+      const { limpos } = response.data;
+
+      toast.success(
+        `${limpos} colaborador(es) tiveram os dados importados de férias limpos.`
+      );
+      setConfirmarLimpezaFeriasPdf(false);
+      carregarColaboradores();
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(error, "Erro ao limpar importação de férias.")
+      );
+      console.error(error);
     }
   }
 
@@ -444,6 +463,14 @@ export default function Colaboradores() {
               className="bg-zinc-800 hover:bg-zinc-700 px-5 py-3 rounded-xl font-semibold transition"
             >
               Importar férias PDF
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setConfirmarLimpezaFeriasPdf(true)}
+              className="bg-red-600 hover:bg-red-700 px-5 py-3 rounded-xl font-semibold transition"
+            >
+              Limpar férias PDF
             </button>
 
             <button
@@ -505,6 +532,15 @@ export default function Colaboradores() {
         textoConfirmar="Inativar"
         onCancelar={() => setColaboradorParaInativar(null)}
         onConfirmar={confirmarInativacaoColaborador}
+      />
+
+      <ConfirmDialog
+        aberto={confirmarLimpezaFeriasPdf}
+        titulo="Limpar importação de férias"
+        mensagem="Deseja apagar dos colaboradores todos os períodos aquisitivos e datas limite que foram importados pelo PDF de férias?"
+        textoConfirmar="Limpar"
+        onCancelar={() => setConfirmarLimpezaFeriasPdf(false)}
+        onConfirmar={limparImportacaoFeriasPdf}
       />
     </>
   );

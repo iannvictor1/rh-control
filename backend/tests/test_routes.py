@@ -904,6 +904,45 @@ def test_extrair_registros_ferias_pdf_escolhe_periodo_aquisitivo_atual():
     ]
 
 
+def test_limpar_importacao_ferias_pdf(tmp_path):
+    client, SessionLocal = criar_cliente_teste(tmp_path)
+
+    db = SessionLocal()
+    db.add_all([
+        Colaborador(
+            nome="Ana",
+            data_admissao=date(2020, 1, 10),
+            data_inicio_periodo_aquisitivo=date(2024, 11, 19),
+            data_fim_periodo_aquisitivo=date(2025, 11, 18),
+            data_limite_ferias=date(2026, 8, 18),
+            ativo=True,
+        ),
+        Colaborador(
+            nome="Bruno",
+            data_admissao=date(2021, 2, 5),
+            ativo=True,
+        ),
+    ])
+    db.commit()
+    db.close()
+
+    response = client.delete("/colaboradores/importar-ferias-pdf")
+
+    assert response.status_code == 200
+    assert response.json()["limpos"] == 1
+
+    db = SessionLocal()
+    colaboradores = db.query(Colaborador).order_by(Colaborador.nome).all()
+    assert len(colaboradores) == 2
+    assert colaboradores[0].data_inicio_periodo_aquisitivo is None
+    assert colaboradores[0].data_fim_periodo_aquisitivo is None
+    assert colaboradores[0].data_limite_ferias is None
+    assert colaboradores[1].nome == "Bruno"
+    db.close()
+
+    app.dependency_overrides.clear()
+
+
 def test_criar_ferias_registra_periodo(tmp_path):
     client, SessionLocal = criar_cliente_teste(tmp_path)
 

@@ -609,6 +609,33 @@ async def importar_limite_ferias_pdf(
     }
 
 
+@router.delete("/importar-ferias-pdf")
+def limpar_importacao_ferias_pdf(
+    _usuario=Depends(exigir_perfis("admin", "rh")),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Colaborador).filter(
+        or_(
+            Colaborador.data_inicio_periodo_aquisitivo.isnot(None),
+            Colaborador.data_fim_periodo_aquisitivo.isnot(None),
+            Colaborador.data_limite_ferias.isnot(None),
+        )
+    )
+    total = query.count()
+
+    query.update(
+        {
+            Colaborador.data_inicio_periodo_aquisitivo: None,
+            Colaborador.data_fim_periodo_aquisitivo: None,
+            Colaborador.data_limite_ferias: None,
+        },
+        synchronize_session=False,
+    )
+    db.commit()
+
+    return {"limpos": total}
+
+
 @router.get("/", response_model=list[ColaboradorResponse])
 def listar_colaboradores(
     db: Session = Depends(get_db)
