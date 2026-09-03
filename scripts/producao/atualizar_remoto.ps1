@@ -34,6 +34,7 @@ $scriptBlock = {
     [System.IO.File]::WriteAllText($dockerConfigFile, '{"auths":{}}', $utf8SemBom)
 
     $env:DOCKER_CONFIG = $dockerConfigDir
+    $env:DOCKER_AUTH_CONFIG = '{"auths":{}}'
   }
 
   function Invoke-Native {

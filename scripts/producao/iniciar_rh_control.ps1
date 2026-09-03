@@ -45,6 +45,7 @@ function Use-DockerConfigSemCredenciais {
   [System.IO.File]::WriteAllText($dockerConfigFile, '{"auths":{}}', $utf8SemBom)
 
   $env:DOCKER_CONFIG = $dockerConfigDir
+  $env:DOCKER_AUTH_CONFIG = '{"auths":{}}'
 }
 
 if (-not (Test-Path -LiteralPath $ProjectDir)) {
