@@ -30,9 +30,8 @@ $scriptBlock = {
 
     New-Item -ItemType Directory -Force -Path $dockerConfigDir | Out-Null
 
-    if (-not (Test-Path -LiteralPath $dockerConfigFile)) {
-      '{"auths":{}}' | Set-Content -LiteralPath $dockerConfigFile -Encoding UTF8
-    }
+    $utf8SemBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($dockerConfigFile, '{"auths":{}}', $utf8SemBom)
 
     $env:DOCKER_CONFIG = $dockerConfigDir
   }
