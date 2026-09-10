@@ -412,6 +412,7 @@ class FeriasCreate(BaseModel):
     data_inicio: date
     data_fim: date
     data_retorno: date
+    abono_pecuniario: bool = False
     observacoes: str | None = None
 
     @model_validator(mode="after")
@@ -430,6 +431,7 @@ class FeriasUpdate(BaseModel):
     data_inicio: date | None = None
     data_fim: date | None = None
     data_retorno: date | None = None
+    abono_pecuniario: bool | None = None
     observacoes: str | None = None
 
     @model_validator(mode="after")
@@ -452,6 +454,7 @@ class FeriasResponse(AuditoriaOcorrenciaResponse):
     data_inicio: date
     data_fim: date
     data_retorno: date
+    abono_pecuniario: bool = False
     observacoes: str | None = None
 
 

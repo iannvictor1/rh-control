@@ -958,6 +958,7 @@ def test_criar_ferias_registra_periodo(tmp_path):
             "data_inicio": "2026-01-02",
             "data_fim": "2026-01-20",
             "data_retorno": "2026-01-21",
+            "abono_pecuniario": True,
             "observacoes": "Período aquisitivo 2025",
         },
     )
@@ -965,6 +966,7 @@ def test_criar_ferias_registra_periodo(tmp_path):
     assert response.status_code == 200
     assert response.json()["data_inicio"] == "2026-01-02"
     assert response.json()["data_retorno"] == "2026-01-21"
+    assert response.json()["abono_pecuniario"] is True
 
     app.dependency_overrides.clear()
 

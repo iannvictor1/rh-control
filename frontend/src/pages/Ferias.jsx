@@ -17,10 +17,14 @@ const formInicial = {
   data_inicio: "",
   data_fim: "",
   data_retorno: "",
+  abono_pecuniario: false,
   observacoes: "",
 };
 
 const DIAS_ALERTA_RETORNO = 7;
+const DIAS_DIREITO_FERIAS = 30;
+const DIAS_ABONO_PECUNIARIO = 10;
+const MS_POR_DIA = 1000 * 60 * 60 * 24;
 
 function calcularRetorno(dataFim) {
   if (!dataFim) return "";
@@ -35,7 +39,35 @@ function diasEntre(dataFinal, dataInicial) {
   const final = new Date(`${dataFinal}T00:00:00`);
   const inicial = new Date(`${dataInicial}T00:00:00`);
 
-  return Math.ceil((final - inicial) / (1000 * 60 * 60 * 24));
+  return Math.ceil((final - inicial) / MS_POR_DIA);
+}
+
+function dataUtc(data) {
+  if (!data) return null;
+
+  const [ano, mes, dia] = data.split("-").map(Number);
+
+  if (!ano || !mes || !dia) return null;
+
+  return Date.UTC(ano, mes - 1, dia);
+}
+
+function calcularDiasFerias(dataInicio, dataFim) {
+  const inicio = dataUtc(dataInicio);
+  const fim = dataUtc(dataFim);
+
+  if (inicio === null || fim === null || fim < inicio) return 0;
+
+  return Math.floor((fim - inicio) / MS_POR_DIA) + 1;
+}
+
+function formatarDiasFerias(dias) {
+  return `${dias} dia(s)`;
+}
+
+function calcularDiasConsumidos(registro) {
+  return calcularDiasFerias(registro.data_inicio, registro.data_fim) +
+    (registro.abono_pecuniario ? DIAS_ABONO_PECUNIARIO : 0);
 }
 
 function statusClasse(status) {
@@ -132,6 +164,14 @@ export default function Ferias() {
       .sort((a, b) => a.dias_para_retorno - b.dias_para_retorno);
   }, [feriasRegistradas, hoje]);
 
+  const saldoFeriasPorColaborador = useMemo(() => {
+    return feriasRegistradas.reduce((acumulado, registro) => {
+      const diasConsumidos = calcularDiasConsumidos(registro);
+      acumulado[registro.colaborador_id] = (acumulado[registro.colaborador_id] || 0) + diasConsumidos;
+      return acumulado;
+    }, {});
+  }, [feriasRegistradas]);
+
   useEffect(() => {
     async function carregarDadosIniciais() {
       try {
@@ -175,11 +215,12 @@ export default function Ferias() {
   }
 
   function atualizarCampo(e) {
-    const { name, value } = e.target;
+    const { checked, name, type, value } = e.target;
+    const novoValor = type === "checkbox" ? checked : value;
 
     setForm((atual) => ({
       ...atual,
-      [name]: value,
+      [name]: novoValor,
       ...(name === "data_fim" && !editando ? { data_retorno: calcularRetorno(value) } : {}),
     }));
   }
@@ -196,6 +237,7 @@ export default function Ferias() {
       data_inicio: registro.data_inicio || "",
       data_fim: registro.data_fim || "",
       data_retorno: registro.data_retorno || "",
+      abono_pecuniario: Boolean(registro.abono_pecuniario),
       observacoes: registro.observacoes || "",
     });
   }
@@ -213,6 +255,7 @@ export default function Ferias() {
       data_inicio: form.data_inicio,
       data_fim: form.data_fim,
       data_retorno: form.data_retorno,
+      abono_pecuniario: Boolean(form.abono_pecuniario),
       observacoes: form.observacoes || null,
     };
 
@@ -295,6 +338,12 @@ export default function Ferias() {
               min: form.data_fim || undefined,
               allowFuture: true,
               required: true,
+            },
+            {
+              name: "abono_pecuniario",
+              label: "Abono pecuniário",
+              type: "checkbox",
+              className: "self-end md:col-span-1",
             },
             {
               name: "observacoes",
@@ -391,6 +440,7 @@ export default function Ferias() {
               <th className="text-left p-4">Início</th>
               <th className="text-left p-4">Fim</th>
               <th className="text-left p-4">Retorno</th>
+              <th className="text-left p-4">Dias / saldo</th>
               <th className="text-left p-4">Observações</th>
               {podeGerenciar && <th className="text-left p-4">Ações</th>}
             </tr>
@@ -399,7 +449,7 @@ export default function Ferias() {
           <tbody>
             {carregando && (
               <tr className="border-t border-zinc-800">
-                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 6 : 5}>
+                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 7 : 6}>
                   Carregando férias...
                 </td>
               </tr>
@@ -407,38 +457,58 @@ export default function Ferias() {
 
             {!carregando && ferias.length === 0 && (
               <tr className="border-t border-zinc-800">
-                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 6 : 5}>
+                <td className="p-6 text-center text-zinc-400" colSpan={podeGerenciar ? 7 : 6}>
                   Nenhum registro de férias encontrado.
                 </td>
               </tr>
             )}
 
-            {!carregando && ferias.map((registro) => (
-              <tr key={registro.id} className="border-t border-zinc-800">
-                <td className="p-4">
-                  {buscarNomeColaborador(registro)}
-                  <AuditInfo registro={registro} compacto />
-                </td>
-                <td className="p-4">{formatarData(registro.data_inicio)}</td>
-                <td className="p-4">{formatarData(registro.data_fim)}</td>
-                <td className="p-4">{formatarData(registro.data_retorno)}</td>
-                <td className="p-4">{registro.observacoes || "Sem observações"}</td>
+            {!carregando && ferias.map((registro) => {
+              const diasTirados = calcularDiasFerias(registro.data_inicio, registro.data_fim);
+              const diasAbono = registro.abono_pecuniario ? DIAS_ABONO_PECUNIARIO : 0;
+              const totalTirado = saldoFeriasPorColaborador[registro.colaborador_id] || diasTirados + diasAbono;
+              const diasRestantes = Math.max(DIAS_DIREITO_FERIAS - totalTirado, 0);
 
-                {podeGerenciar && (
+              return (
+                <tr key={registro.id} className="border-t border-zinc-800">
                   <td className="p-4">
-                    <ActionMenu
-                      aberto={menuAberto === registro.id}
-                      onClose={() => setMenuAberto(null)}
-                      onToggle={() =>
-                        setMenuAberto(menuAberto === registro.id ? null : registro.id)
-                      }
-                      onEditar={() => editarFerias(registro)}
-                      onExcluir={() => excluirFerias(registro)}
-                    />
+                    {buscarNomeColaborador(registro)}
+                    <AuditInfo registro={registro} compacto />
                   </td>
-                )}
-              </tr>
-            ))}
+                  <td className="p-4">{formatarData(registro.data_inicio)}</td>
+                  <td className="p-4">{formatarData(registro.data_fim)}</td>
+                  <td className="p-4">{formatarData(registro.data_retorno)}</td>
+                  <td className="p-4 whitespace-nowrap">
+                    <span className="block font-semibold text-zinc-100">
+                      Tirou {formatarDiasFerias(diasTirados)}
+                    </span>
+                    {registro.abono_pecuniario && (
+                      <span className="block text-sm text-blue-300">
+                        Abono {formatarDiasFerias(diasAbono)}
+                      </span>
+                    )}
+                    <span className="block text-sm text-zinc-400">
+                      Sobra {formatarDiasFerias(diasRestantes)}
+                    </span>
+                  </td>
+                  <td className="p-4">{registro.observacoes || "Sem observações"}</td>
+
+                  {podeGerenciar && (
+                    <td className="p-4">
+                      <ActionMenu
+                        aberto={menuAberto === registro.id}
+                        onClose={() => setMenuAberto(null)}
+                        onToggle={() =>
+                          setMenuAberto(menuAberto === registro.id ? null : registro.id)
+                        }
+                        onEditar={() => editarFerias(registro)}
+                        onExcluir={() => excluirFerias(registro)}
+                      />
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

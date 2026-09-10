@@ -180,6 +180,7 @@ class Ferias(AuditoriaOcorrenciaMixin, Base):
     data_inicio = Column(Date, nullable=False)
     data_fim = Column(Date, nullable=False)
     data_retorno = Column(Date, nullable=False)
+    abono_pecuniario = Column(Boolean, default=False, nullable=False)
     observacoes = Column(String, nullable=True)
 
     colaborador = relationship("Colaborador")

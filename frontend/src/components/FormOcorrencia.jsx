@@ -42,6 +42,24 @@ function CampoFormulario({ campo, form, hoje, onChange }) {
     );
   }
 
+  if (campo.type === "checkbox") {
+    return (
+      <label className={`flex items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-950/50 px-4 py-3 ${campo.className || ""}`}>
+        <input
+          className="h-4 w-4 accent-blue-600"
+          type="checkbox"
+          name={campo.name}
+          checked={Boolean(form[campo.name])}
+          onChange={onChange}
+        />
+
+        <span className="text-sm font-semibold text-zinc-200">
+          {campo.label}
+        </span>
+      </label>
+    );
+  }
+
   return (
     <div className={campo.className}>
       <label className="text-sm text-zinc-400 mb-1 block">
