@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export default function ActionMenu({
   aberto,
@@ -15,17 +15,41 @@ export default function ActionMenu({
     left: 0,
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!aberto || !botaoRef.current) return;
 
-    const rect = botaoRef.current.getBoundingClientRect();
-    const larguraMenu = 136;
+    function atualizarPosicao() {
+      const rect = botaoRef.current.getBoundingClientRect();
+      const larguraMenu = menuRef.current?.offsetWidth || 160;
+      const alturaMenu = menuRef.current?.offsetHeight || 112;
+      const margem = 12;
+      const espacamento = 6;
 
-    setPosicao({
-      top: rect.bottom + 6,
-      left: Math.max(12, rect.right - larguraMenu),
-    });
-  }, [aberto]);
+      let top = rect.bottom + espacamento;
+      let left = rect.right - larguraMenu;
+
+      if (top + alturaMenu > window.innerHeight - margem) {
+        top = rect.top - alturaMenu - espacamento;
+      }
+
+      setPosicao({
+        top: Math.max(margem, top),
+        left: Math.min(
+          Math.max(margem, left),
+          window.innerWidth - larguraMenu - margem
+        ),
+      });
+    }
+
+    atualizarPosicao();
+    window.addEventListener("resize", atualizarPosicao);
+    window.addEventListener("scroll", atualizarPosicao, true);
+
+    return () => {
+      window.removeEventListener("resize", atualizarPosicao);
+      window.removeEventListener("scroll", atualizarPosicao, true);
+    };
+  }, [aberto, actions]);
 
   useEffect(() => {
     if (!aberto) return;

@@ -136,6 +136,24 @@ class Suspensao(AuditoriaOcorrenciaMixin, Base):
     colaborador = relationship("Colaborador")
 
 
+class FichaFeedback(AuditoriaOcorrenciaMixin, Base):
+    __tablename__ = "fichas_feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    colaborador_id = Column(
+        Integer,
+        ForeignKey("colaboradores.id"),
+        nullable=False,
+    )
+
+    data_ocorrencia = Column(Date, nullable=False)
+    ocorrencia = Column(String, nullable=False)
+    observacoes = Column(String, nullable=True)
+
+    colaborador = relationship("Colaborador")
+
+
 class ExperienciaConcluida(Base):
     __tablename__ = "experiencias_concluidas"
     __table_args__ = (

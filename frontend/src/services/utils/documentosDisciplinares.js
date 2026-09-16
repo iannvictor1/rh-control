@@ -145,7 +145,97 @@ function corpoSuspensao(registro) {
   `;
 }
 
+function montarFichaFeedback({ registro, colaboradores }) {
+  const colaborador = dadosColaborador(registro, colaboradores);
+  const detalhes = registro.detalhes || {};
+  const dataOcorrencia = registro.data_ocorrencia || registro.data_inicio;
+  const ocorrencia = registro.ocorrencia || registro.motivo || detalhes.ocorrencia;
+  const observacoes = registro.observacoes || detalhes.observacoes;
+
+  return `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Ficha de Feedback</title>
+        <style>
+          @page { size: A4; margin: 18mm; }
+          body { color: #111827; font-family: Arial, sans-serif; margin: 0; }
+          main { margin: 0 auto; max-width: 760px; }
+          h1 {
+            border: 1px solid #111827;
+            font-size: 26px;
+            margin: 0;
+            padding: 24px 12px;
+            text-align: center;
+            text-transform: uppercase;
+          }
+          table { border-collapse: collapse; margin-top: 0; width: 100%; }
+          td {
+            border: 1px solid #111827;
+            font-size: 14px;
+            line-height: 1.45;
+            padding: 8px 10px;
+            vertical-align: top;
+          }
+          .linha-curta { height: 28px; }
+          .campo-grande { height: 132px; }
+          .campo-medio { height: 86px; }
+          .assinatura { height: 34px; }
+          .valor { margin-top: 6px; white-space: pre-wrap; }
+          @media print { button { display: none; } }
+        </style>
+      </head>
+      <body>
+        <main>
+          <h1>Ficha de Feedback</h1>
+          <table>
+            <tr>
+              <td class="linha-curta"><strong>Departamento:</strong> ${texto(colaborador.setor, "")}</td>
+            </tr>
+            <tr>
+              <td class="linha-curta"><strong>Nome do funcionário:</strong> ${texto(colaborador.nome, "")}</td>
+            </tr>
+            <tr>
+              <td class="linha-curta"><strong>Data:</strong> ${texto(formatarData(dataOcorrencia), "___/___/____")}</td>
+            </tr>
+            <tr>
+              <td class="campo-grande">
+                <strong>Ocorrência</strong>
+                <div class="valor">${texto(ocorrencia, "")}</div>
+              </td>
+            </tr>
+            <tr>
+              <td class="campo-medio">
+                <strong>Fatos e dados apresentados (anexar cópia), se necessário:</strong>
+                <div class="valor">${texto(ocorrencia, "")}</div>
+              </td>
+            </tr>
+            <tr>
+              <td class="campo-medio">
+                <strong>Observações e Orientações</strong>
+                <div class="valor">${texto(observacoes, "")}</div>
+              </td>
+            </tr>
+            <tr>
+              <td class="assinatura"><strong>Assinatura do RH:</strong></td>
+            </tr>
+            <tr>
+              <td class="assinatura"><strong>Assinatura do Funcionário:</strong></td>
+            </tr>
+          </table>
+        </main>
+        <script>window.onload = () => window.print();</script>
+      </body>
+    </html>
+  `;
+}
+
 function montarDocumento({ tipo, registro, colaboradores }) {
+  if (tipo === "feedback") {
+    return montarFichaFeedback({ registro, colaboradores });
+  }
+
   const colaborador = dadosColaborador(registro, colaboradores);
   const detalhes = registro.detalhes || {};
   const dataDocumento = tipo === "advertencia" ? registro.data_advertencia : registro.data_inicio;

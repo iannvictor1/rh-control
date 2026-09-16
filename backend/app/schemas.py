@@ -407,6 +407,48 @@ class SuspensoesPaginadasResponse(BaseModel):
     limit: int
 
 
+class FichaFeedbackCreate(BaseModel):
+    colaborador_id: int
+    data_ocorrencia: date
+    ocorrencia: str
+    observacoes: str | None = None
+
+    @field_validator("data_ocorrencia")
+    @classmethod
+    def validar_data(cls, valor):
+        return validar_data_nao_futura(valor)
+
+
+class FichaFeedbackUpdate(BaseModel):
+    colaborador_id: int | None = None
+    data_ocorrencia: date | None = None
+    ocorrencia: str | None = None
+    observacoes: str | None = None
+
+    @field_validator("data_ocorrencia")
+    @classmethod
+    def validar_data(cls, valor):
+        return validar_data_nao_futura(valor)
+
+
+class FichaFeedbackResponse(AuditoriaOcorrenciaResponse):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    colaborador_id: int
+    colaborador: ColaboradorOpcaoResponse | None = None
+    data_ocorrencia: date
+    ocorrencia: str
+    observacoes: str | None = None
+
+
+class FichasFeedbackPaginadasResponse(BaseModel):
+    items: list[FichaFeedbackResponse]
+    total: int
+    skip: int
+    limit: int
+
+
 class FeriasCreate(BaseModel):
     colaborador_id: int
     data_inicio: date

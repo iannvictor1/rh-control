@@ -14,6 +14,7 @@ from app.routes import usuarios
 from app.routes import notas
 from app.routes import ferias
 from app.routes import experiencias
+from app.routes import fichas_feedback
 
 from app.routes.colaboradores import (
     router as colaboradores_router
@@ -60,3 +61,4 @@ app.include_router(usuarios.router)
 app.include_router(notas.router)
 app.include_router(ferias.router)
 app.include_router(experiencias.router)
+app.include_router(fichas_feedback.router)

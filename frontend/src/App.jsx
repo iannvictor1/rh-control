@@ -10,6 +10,7 @@ import Faltas from "./pages/Faltas";
 import Atestados from "./pages/Atestados";
 import Advertencias from "./pages/Advertencias";
 import Suspensoes from "./pages/Suspensoes";
+import FichaFeedback from "./pages/FichaFeedback";
 import CalendarioRh from "./pages/CalendarioRh";
 import Ferias from "./pages/Ferias";
 import DetalheColaborador from "./pages/DetalheColaborador";
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/atestados" element={<Atestados />} />
           <Route path="/advertencias" element={<Advertencias />} />
           <Route path="/suspensoes" element={<Suspensoes />} />
+          <Route path="/ficha-feedback" element={<FichaFeedback />} />
           <Route path="/ferias" element={<Ferias />} />
           <Route path="/calendario-rh" element={<CalendarioRh />} />
           <Route path="/notas" element={<Notas />} />

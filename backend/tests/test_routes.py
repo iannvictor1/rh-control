@@ -18,6 +18,7 @@ from app.models import (
     ExperienciaConcluida,
     Falta,
     Ferias,
+    FichaFeedback,
     NotaAdesiva,
     Suspensao,
     Usuario,
@@ -552,6 +553,65 @@ def test_buscar_suspensoes_filtra_status_e_pagina(tmp_path):
     assert response.status_code == 200
     assert response.json()["total"] == 1
     assert response.json()["items"][0]["status"] == "Finalizada"
+
+    app.dependency_overrides.clear()
+
+
+def test_ficha_feedback_salva_edita_e_exclui_ocorrencia(tmp_path):
+    client, SessionLocal = criar_cliente_teste(tmp_path)
+
+    db = SessionLocal()
+    db.add(Colaborador(nome="Ana Silva", ativo=True))
+    db.commit()
+    db.close()
+
+    response = client.post(
+        "/fichas-feedback/",
+        json={
+            "colaborador_id": 1,
+            "data_ocorrencia": "2026-05-20",
+            "ocorrencia": "Feedback sobre postura",
+            "observacoes": "Orientada pelo RH",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["ocorrencia"] == "Feedback sobre postura"
+
+    response = client.get(
+        "/fichas-feedback/busca",
+        params={"q": "postura", "skip": 0, "limit": 10},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+    assert response.json()["items"][0]["colaborador"]["nome"] == "Ana Silva"
+
+    response = client.put(
+        "/fichas-feedback/1",
+        json={
+            "observacoes": "Orientada pela liderança",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["observacoes"] == "Orientada pela liderança"
+
+    response = client.delete("/fichas-feedback/1")
+
+    assert response.status_code == 204
+
+    response = client.get("/fichas-feedback/")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+    db = SessionLocal()
+    ficha = db.query(FichaFeedback).filter(FichaFeedback.id == 1).first()
+    db.close()
+
+    assert ficha is not None
+    assert ficha.removido_em is not None
 
     app.dependency_overrides.clear()
 

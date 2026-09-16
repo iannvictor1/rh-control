@@ -69,6 +69,14 @@ const icons = {
       <path d="M12 7v5l3 2" />
     </Icon>
   ),
+  fichaFeedback: (
+    <Icon>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+      <path d="M14 2v6h6" />
+      <path d="M8 13h8" />
+      <path d="M8 17h5" />
+    </Icon>
+  ),
   exportacoes: (
     <Icon>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
@@ -168,6 +176,7 @@ export default function Layout() {
     { to: "/atestados", label: "Atestados", icon: icons.calendario },
     { to: "/advertencias", label: "Advertências", icon: icons.advertencias },
     { to: "/suspensoes", label: "Suspensões", icon: icons.suspensoes },
+    { to: "/ficha-feedback", label: "Ficha Feedback", icon: icons.fichaFeedback },
     { to: "/ferias", label: "Férias", icon: icons.ferias },
     { to: "/calendario-rh", label: "Calendário RH", icon: icons.calendario },
     { to: "/exportacoes", label: "Exportações", icon: icons.exportacoes },
