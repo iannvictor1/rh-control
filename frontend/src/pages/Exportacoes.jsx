@@ -25,6 +25,7 @@ const relatorios = {
       { id: "rg", label: "RG", valor: (item) => item.rg || "-" },
       { id: "email", label: "E-mail", valor: (item) => item.email || "-" },
       { id: "telefone", label: "Telefone", valor: (item) => item.telefone || "-" },
+      { id: "data_nascimento", label: "Data de nascimento", valor: (item) => formatarData(item.data_nascimento) },
       { id: "admissao", label: "Admissão", valor: (item) => formatarData(item.data_admissao) },
       { id: "desligamento", label: "Desligamento", valor: (item) => formatarData(item.data_desligamento) },
       { id: "motivo_desligamento", label: "Motivo desligamento", valor: (item) => item.motivo_desligamento || "-" },
