@@ -16,6 +16,7 @@ const formInicial = {
   colaborador_id: "",
   data_ocorrencia: new Date().toISOString().slice(0, 10),
   ocorrencia: "",
+  motivo: "",
   observacoes: "",
 };
 
@@ -83,6 +84,7 @@ export default function FichaFeedback() {
       colaborador: registro.colaborador,
       data_ocorrencia: registro.data_ocorrencia,
       ocorrencia: registro.ocorrencia,
+      motivo: registro.motivo,
       observacoes: registro.observacoes,
     };
   }
@@ -94,6 +96,7 @@ export default function FichaFeedback() {
       colaborador_id: String(ficha.colaborador_id),
       data_ocorrencia: ficha.data_ocorrencia || "",
       ocorrencia: ficha.ocorrencia || "",
+      motivo: ficha.motivo || "",
       observacoes: ficha.observacoes || "",
     });
   }
@@ -110,6 +113,7 @@ export default function FichaFeedback() {
       colaborador_id: Number(form.colaborador_id),
       data_ocorrencia: form.data_ocorrencia,
       ocorrencia: form.ocorrencia,
+      motivo: form.motivo,
       observacoes: form.observacoes,
     };
 
@@ -216,6 +220,19 @@ export default function FichaFeedback() {
 
           <div className="md:col-span-4">
             <label className="text-sm text-zinc-400 mb-1 block">
+              Motivo
+            </label>
+            <input
+              className="input w-full"
+              name="motivo"
+              value={form.motivo}
+              onChange={atualizarCampo}
+              required
+            />
+          </div>
+
+          <div className="md:col-span-4">
+            <label className="text-sm text-zinc-400 mb-1 block">
               Ocorrência
             </label>
 
@@ -264,7 +281,7 @@ export default function FichaFeedback() {
 
       <FiltrosOcorrencias
         busca={busca}
-        placeholderBusca="Buscar por colaborador, ocorrência ou observações"
+        placeholderBusca="Buscar por colaborador, motivo, ocorrência ou observações"
         dataInicio={dataInicio}
         dataFim={dataFim}
         hoje={hoje}

@@ -92,6 +92,7 @@ def buscar_fichas_feedback(
         query = query.filter(
             or_(
                 FichaFeedback.ocorrencia.ilike(termo),
+                FichaFeedback.motivo.ilike(termo),
                 FichaFeedback.observacoes.ilike(termo),
                 Colaborador.nome.ilike(termo),
             )

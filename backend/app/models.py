@@ -148,6 +148,7 @@ class FichaFeedback(AuditoriaOcorrenciaMixin, Base):
     )
 
     data_ocorrencia = Column(Date, nullable=False)
+    motivo = Column(String, nullable=True)
     ocorrencia = Column(String, nullable=False)
     observacoes = Column(String, nullable=True)
 

@@ -571,16 +571,18 @@ def test_ficha_feedback_salva_edita_e_exclui_ocorrencia(tmp_path):
             "colaborador_id": 1,
             "data_ocorrencia": "2026-05-20",
             "ocorrencia": "Feedback sobre postura",
+            "motivo": "Registro de ponto",
             "observacoes": "Orientada pelo RH",
         },
     )
 
     assert response.status_code == 200
     assert response.json()["ocorrencia"] == "Feedback sobre postura"
+    assert response.json()["motivo"] == "Registro de ponto"
 
     response = client.get(
         "/fichas-feedback/busca",
-        params={"q": "postura", "skip": 0, "limit": 10},
+        params={"q": "Registro de ponto", "skip": 0, "limit": 10},
     )
 
     assert response.status_code == 200
@@ -591,11 +593,14 @@ def test_ficha_feedback_salva_edita_e_exclui_ocorrencia(tmp_path):
         "/fichas-feedback/1",
         json={
             "observacoes": "Orientada pela liderança",
+            "motivo": "Preenchimento do ponto",
         },
     )
 
     assert response.status_code == 200
     assert response.json()["observacoes"] == "Orientada pela liderança"
+    assert response.json()["motivo"] == "Preenchimento do ponto"
+    assert client.get("/fichas-feedback/").json()[0]["motivo"] == "Preenchimento do ponto"
 
     response = client.delete("/fichas-feedback/1")
 

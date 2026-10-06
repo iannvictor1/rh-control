@@ -78,18 +78,20 @@ function blocoAssinaturas() {
 
 function corpoAdvertencia(registro) {
   const detalhes = registro.detalhes || {};
+  const descricao = texto(detalhes.descricao ?? registro.motivo);
   const modelo = detalhes.modelo;
   const diasOcorrencia = texto(detalhes.dias_ocorrencia);
 
   if (modelo === "outro") {
     return `
-      <p>Informamos que no(s) dia(s) ${diasOcorrencia}, foi registrada a seguinte ocorrência disciplinar: ${texto(registro.motivo)}.</p>
+      <p>Informamos que no(s) dia(s) ${diasOcorrencia}, foi registrada a seguinte ocorrência disciplinar: <span class="texto-livre">${descricao}</span>.</p>
       <p>A presente advertência fica registrada como orientação e alerta quanto ao cumprimento das normas internas da empresa, das obrigações contratuais e da postura profissional esperada no ambiente de trabalho.</p>
     `;
   }
 
   if (modelo === "abandono_posto") {
     return `
+      ${detalhes.descricao ? `<p class="texto-livre">${descricao}</p>` : ""}
       <p>Informamos que no(s) dia(s) ${diasOcorrencia}, foi constatado que V.Sa. ausentou-se de seu posto de trabalho sem autorização, configurando abandono momentâneo de posto, situação que caracteriza descumprimento das obrigações contratuais e das normas internas da empresa e a Consolidação das Leis do Trabalho (CLT).</p>
       <p>Ressaltamos que, de acordo com o artigo 482, alínea "i", da CLT, o abandono de emprego ou de posto de trabalho é considerado ato faltoso passível de sanções disciplinares, podendo inclusive acarretar dispensa por justa causa em casos de reincidência.</p>
     `;
@@ -97,12 +99,13 @@ function corpoAdvertencia(registro) {
 
   if (modelo === "insubordinacao_ma_conduta") {
     return `
-      <p>Informamos que, no dia ${diasOcorrencia}, foi constatado que V.Sa., no exercício da função de ${texto(detalhes.funcao_ocorrencia)}, pelo motivo de ${texto(registro.motivo)}. Tal conduta caracteriza insubordinação e descumprimento das orientações relacionadas à execução das atividades profissionais, além de demonstrar comportamento incompatível com a postura profissional esperada no ambiente de trabalho.</p>
+      <p>Informamos que, no dia ${diasOcorrencia}, foi constatado que V.Sa., no exercício da função de ${texto(detalhes.funcao_ocorrencia)}, pelo motivo de <span class="texto-livre">${descricao}</span>. Tal conduta caracteriza insubordinação e descumprimento das orientações relacionadas à execução das atividades profissionais, além de demonstrar comportamento incompatível com a postura profissional esperada no ambiente de trabalho.</p>
       <p>Ressaltamos que, de acordo com o artigo 482, alínea "h", da CLT, constitui falta grave o ato de indisciplina ou de insubordinação.</p>
     `;
   }
 
   return `
+    ${detalhes.descricao ? `<p class="texto-livre">${descricao}</p>` : ""}
     <p>Informamos que sua ausência ao trabalho no(s) dia(s) ${diasOcorrencia} foi registrada sem a devida justificativa, contrariando as normas internas da empresa e a Consolidação das Leis do Trabalho (CLT).</p>
     <p>Solicitamos que o(a) senhor(a) apresente, com a máxima brevidade, a devida justificativa para a falta, acompanhada de documentos comprobatórios.</p>
   `;
@@ -149,7 +152,7 @@ function montarFichaFeedback({ registro, colaboradores }) {
   const colaborador = dadosColaborador(registro, colaboradores);
   const detalhes = registro.detalhes || {};
   const dataOcorrencia = registro.data_ocorrencia || registro.data_inicio;
-  const ocorrencia = registro.ocorrencia || registro.motivo || detalhes.ocorrencia;
+  const ocorrencia = registro.ocorrencia || detalhes.ocorrencia;
   const observacoes = registro.observacoes || detalhes.observacoes;
 
   return `
@@ -200,14 +203,14 @@ function montarFichaFeedback({ registro, colaboradores }) {
               <td class="linha-curta"><strong>Data:</strong> ${texto(formatarData(dataOcorrencia), "___/___/____")}</td>
             </tr>
             <tr>
-              <td class="campo-grande">
-                <strong>Ocorrência</strong>
-                <div class="valor">${texto(ocorrencia, "")}</div>
+              <td class="linha-curta">
+                <strong>Motivo</strong>
+                <div class="valor">${texto(registro.motivo, "")}</div>
               </td>
             </tr>
             <tr>
-              <td class="campo-medio">
-                <strong>Fatos e dados apresentados (anexar cópia), se necessário:</strong>
+              <td class="campo-grande">
+                <strong>Ocorrência</strong>
                 <div class="valor">${texto(ocorrencia, "")}</div>
               </td>
             </tr>
@@ -243,11 +246,11 @@ function montarDocumento({ tipo, registro, colaboradores }) {
     ? ` - ${escapeHtml(detalhes.modelo_outro).toUpperCase()}`
     : "";
   const titulo = tipo === "advertencia"
-    ? `ADVERTÊNCIA DISCIPLINAR${complementoTitulo}`
+    ? `ADVERTÊNCIA DISCIPLINAR${registro.tipo ? ` - ${texto(registro.tipo).toUpperCase()}` : ""}${complementoTitulo}`
     : `SUSPENSÃO DISCIPLINAR${complementoTitulo}`;
   const corpo = tipo === "advertencia" ? corpoAdvertencia(registro) : corpoSuspensao(registro);
   const informacoesAdicionais = detalhes.observacoes
-    ? `<p>${texto(detalhes.observacoes, "")}</p>`
+    ? `<p class="texto-livre">${texto(detalhes.observacoes, "")}</p>`
     : "";
 
   return `
@@ -262,6 +265,8 @@ function montarDocumento({ tipo, registro, colaboradores }) {
           h1 { font-size: 22px; text-align: center; margin: 0 0 28px; }
           p { font-size: 15px; line-height: 1.55; text-align: justify; }
           .dados p { margin: 8px 0; text-align: left; }
+          .motivo { font-size: 18px; margin: 20px 0; white-space: pre-wrap; }
+          .texto-livre { white-space: pre-wrap; }
           .assinatura { margin-top: 34px; text-align: left; }
           .ciente { margin-top: 34px; text-align: left; }
           .linha { border-top: 1px solid #111827; margin-top: 40px; padding-top: 8px; text-align: center; width: 320px; }
@@ -279,9 +284,11 @@ function montarDocumento({ tipo, registro, colaboradores }) {
             <p><strong>Setor:</strong> ${texto(colaborador.setor)}</p>
             <p><strong>Data:</strong> ${texto(formatarData(dataDocumento), "___/___/____")}</p>
           </section>
-          ${informacoesAdicionais}
+          ${tipo === "advertencia" && detalhes.descricao != null && registro.motivo ? `<h2 class="motivo">${texto(registro.motivo)}</h2>` : ""}
+          ${tipo !== "advertencia" ? informacoesAdicionais : ""}
           <p>Prezado(a),</p>
           ${corpo}
+          ${tipo === "advertencia" ? informacoesAdicionais : ""}
           <p>Desta forma, fica registrada a presente medida disciplinar, servindo como orientação e alerta de que novas ocorrências semelhantes poderão acarretar medidas disciplinares mais severas.</p>
           ${blocoAssinaturas()}
         </main>

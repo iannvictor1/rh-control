@@ -26,6 +26,7 @@ const formInicial = {
   dias_ocorrencia: "",
   funcao_ocorrencia: "",
   motivo: "",
+  descricao: "",
   observacoes: "",
 };
 
@@ -100,7 +101,8 @@ export default function Advertencias() {
       modelo_outro: advertencia.detalhes?.modelo_outro || "",
       dias_ocorrencia: advertencia.detalhes?.dias_ocorrencia || "",
       funcao_ocorrencia: advertencia.detalhes?.funcao_ocorrencia || "",
-      motivo: advertencia.motivo || "",
+      motivo: advertencia.detalhes?.descricao != null ? advertencia.motivo || "" : "",
+      descricao: advertencia.detalhes?.descricao ?? advertencia.motivo ?? "",
       observacoes: advertencia.detalhes?.observacoes || "",
     });
   }
@@ -119,6 +121,8 @@ export default function Advertencias() {
       tipo: form.tipo,
       motivo: form.motivo,
       detalhes: {
+        ...editando?.detalhes,
+        descricao: form.descricao,
         modelo: form.modelo,
         modelo_outro: form.modelo_outro,
         dias_ocorrencia: form.dias_ocorrencia,
@@ -216,7 +220,13 @@ export default function Advertencias() {
             },
             {
               name: "motivo",
-              label: "Motivo / descrição",
+              label: "Motivo",
+              required: true,
+              className: "md:col-span-2",
+            },
+            {
+              name: "descricao",
+              label: "Descrição",
               required: true,
               type: "textarea",
               className: "md:col-span-2",

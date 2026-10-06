@@ -408,6 +408,7 @@ class SuspensoesPaginadasResponse(BaseModel):
 
 
 class FichaFeedbackCreate(BaseModel):
+    motivo: str | None = None
     colaborador_id: int
     data_ocorrencia: date
     ocorrencia: str
@@ -420,6 +421,7 @@ class FichaFeedbackCreate(BaseModel):
 
 
 class FichaFeedbackUpdate(BaseModel):
+    motivo: str | None = None
     colaborador_id: int | None = None
     data_ocorrencia: date | None = None
     ocorrencia: str | None = None
@@ -432,6 +434,7 @@ class FichaFeedbackUpdate(BaseModel):
 
 
 class FichaFeedbackResponse(AuditoriaOcorrenciaResponse):
+    motivo: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
     id: int
